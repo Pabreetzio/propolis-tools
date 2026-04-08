@@ -1,16 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { LetterGlyph } from './LetterGlyph.js';
-import { PropolisSymbol } from './PropolisSymbol.js';
-import { buildBorderedDemoSymbol } from './demoLayout.js';
+import { EncoderPanel } from './EncoderPanel.js';
 import { LETTER_PATTERNS } from '@propolis-tools/renderer';
-
-const SEEDS = [7, 42, 99, 256, 1337, 8191];
 
 export function App() {
   const [selectedLetter, setSelectedLetter] = useState<number | null>(null);
-  const [symbolSeed, setSymbolSeed] = useState(7);
-
-  const demoLetters = useMemo(() => buildBorderedDemoSymbol(2, symbolSeed), [symbolSeed]);
 
   const dataLetters = LETTER_PATTERNS.slice(0, 32);
   const borderLetters = LETTER_PATTERNS.slice(32);
@@ -36,66 +30,8 @@ export function App() {
         </p>
       </header>
 
-      {/* ── Demo Symbol + Info ── */}
-      <section style={{ marginBottom: '3rem' }}>
-        <div style={{ display: 'flex', gap: '2.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-
-          {/* Symbol preview — let it size naturally */}
-          <div style={{
-            background: '#080812',
-            borderRadius: 16,
-            border: '1px solid var(--border)',
-            padding: '0.75rem',
-            flexShrink: 0,
-            display: 'inline-flex',
-          }}>
-            <PropolisSymbol letters={demoLetters} size={320} />
-          </div>
-
-          {/* Controls + explainer */}
-          <div style={{ flex: 1, minWidth: 260, paddingTop: '0.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Demo Symbol</h2>
-              <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>
-                {demoLetters.length} letters · random data
-              </span>
-            </div>
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.875rem', lineHeight: 1.7, marginBottom: '1.25rem' }}>
-              Each dot cluster is one <strong style={{ color: 'var(--text)' }}>letter</strong> — 12 dots encoding
-              5 bits. Letters tile the hex plane seamlessly. The outer ring uses border letters
-              to mark the symbol boundary for locating it in an image.
-            </p>
-
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Try a different pattern
-            </p>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-              {SEEDS.map(s => (
-                <button
-                  key={s}
-                  onClick={() => setSymbolSeed(s)}
-                  style={{
-                    padding: '0.3rem 0.7rem',
-                    borderRadius: 6,
-                    border: `1px solid ${symbolSeed === s ? 'var(--accent)' : 'var(--border)'}`,
-                    background: symbolSeed === s ? 'var(--accent)' : 'transparent',
-                    color: symbolSeed === s ? '#fff' : 'var(--text-dim)',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-
-            <p style={{ color: '#44446a', fontSize: '0.78rem', fontStyle: 'italic' }}>
-              Encoder coming soon — letters are random for visual preview.
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* ── Encoder ── */}
+      <EncoderPanel />
 
       {/* ── How it works ── */}
       <section style={{ marginBottom: '3rem' }}>
