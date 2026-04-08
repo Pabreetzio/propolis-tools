@@ -1,0 +1,13 @@
+{
+  "name": "propolis-tools",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

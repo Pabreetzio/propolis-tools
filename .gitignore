@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.vite/
+*.js.map
+*.d.ts.map
+pnpm-lock.yaml
+.pnpmfile.cjs
