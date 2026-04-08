@@ -78,10 +78,13 @@ export function renderBitCanvasToSVG(
     })
     .join('\n');
 
+  // Omit width/height so the SVG scales to fill whatever container it's in.
+  // viewBox preserves aspect ratio; consumers control pixel size via CSS.
   return [
     `<svg xmlns="http://www.w3.org/2000/svg"`,
     `     viewBox="0 0 ${w.toFixed(3)} ${h.toFixed(3)}"`,
-    `     width="${w.toFixed(3)}" height="${h.toFixed(3)}">`,
+    `     preserveAspectRatio="xMidYMid meet"`,
+    `     style="display:block;width:100%;height:100%">`,
     `  <rect width="100%" height="100%" fill="${o.background}"/>`,
     circles,
     `</svg>`,

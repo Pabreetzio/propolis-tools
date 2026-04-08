@@ -6,25 +6,22 @@ interface Props {
   size?: number;
 }
 
-/**
- * Renders a full propolis symbol (collection of placed letters) as SVG.
- */
-export function PropolisSymbol({ letters, size = 400 }: Props) {
+export function PropolisSymbol({ letters, size = 340 }: Props) {
   const svg = useMemo(() =>
     renderToSVG(letters, {
-      dotRadius: 0.44,
+      dotRadius: 0.42,
       gridSpacing: 1,
-      colorOn: '#c8c8ff',
-      colorOff: '#1e1e32',
-      background: '#0f0f1a',
-      padding: 2,
+      colorOn: '#d0d0ff',
+      colorOff: '#1e1e38',
+      background: '#080812',
+      padding: 2.0,
       showOff: true,
     }),
   [letters]);
 
   return (
     <div
-      style={{ width: size, height: size, borderRadius: 12, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{ width: size, height: size }}
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );

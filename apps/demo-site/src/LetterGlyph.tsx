@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { renderLetterToSVG } from '@propolis-tools/renderer';
+import { renderLetterToSVG, LETTER_PATTERNS } from '@propolis-tools/renderer';
 
 interface Props {
   index: number;
@@ -8,43 +8,63 @@ interface Props {
   onClick?: () => void;
 }
 
-export function LetterGlyph({ index, size = 80, highlighted = false, onClick }: Props) {
+export function LetterGlyph({ index, size = 96, highlighted = false, onClick }: Props) {
+  const isData = index < 32;
+  const pattern = LETTER_PATTERNS[index];
+
   const svg = useMemo(() =>
     renderLetterToSVG(index, {
-      dotRadius: 0.44,
+      dotRadius: 0.46,
       gridSpacing: 1,
       colorOn: highlighted ? '#ff6b9d' : '#c8c8ff',
-      colorOff: highlighted ? '#3a2030' : '#1e1e30',
-      background: highlighted ? '#2a1828' : '#141428',
-      padding: 1.5,
+      colorOff: highlighted ? '#38182e' : '#22223c',
+      background: 'transparent',
+      padding: 1.2,
       showOff: true,
     }),
   [index, highlighted]);
 
+  const label = isData
+    ? index.toString(2).padStart(5, '0')
+    : `B${index - 32}`;
+
   return (
     <button
       onClick={onClick}
-      title={`Letter ${index} (0x${(index < 32 ? [
-        0x000,0x007,0xf80,0x01f,0xc00,0x09b,0xf40,0xd99,
-        0xa64,0x067,0x009,0x277,0x488,0x5bf,0xfbb,0xb66,
-        0x499,0x044,0xa40,0xb77,0xd88,0xff6,0xf98,0x59b,
-        0x266,0x0bf,0xf64,0x3ff,0xfe0,0x07f,0xff8,0xfff,
-      ][index] : 0).toString(16).padStart(3,'0')})`}
+      title={`Letter ${index} · pattern 0x${pattern.toString(16).padStart(3, '0')}`}
       style={{
-        width: size,
-        height: size,
-        padding: 0,
-        border: `1px solid ${highlighted ? '#ff6b9d44' : '#2e2e4a'}`,
-        borderRadius: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+        padding: '6px 4px 5px',
+        border: `1px solid ${highlighted ? '#ff6b9d55' : '#2a2a44'}`,
+        borderRadius: 10,
         cursor: onClick ? 'pointer' : 'default',
-        overflow: 'hidden',
-        background: 'none',
-        display: 'block',
-        transition: 'border-color 0.15s, transform 0.1s',
+        background: highlighted ? '#1e101c' : '#0e0e20',
+        transition: 'border-color 0.15s, background 0.15s, transform 0.1s',
+        width: size,
       }}
-      onMouseEnter={e => { if (onClick) (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
+      onMouseEnter={e => {
+        if (!highlighted) (e.currentTarget as HTMLElement).style.borderColor = '#5555aa';
+      }}
+      onMouseLeave={e => {
+        if (!highlighted) (e.currentTarget as HTMLElement).style.borderColor = '#2a2a44';
+      }}
+    >
+      {/* SVG container — fixed square so the glyph fills it */}
+      <div style={{ width: size - 16, height: size - 16, flexShrink: 0 }}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+      <span style={{
+        fontSize: 10,
+        fontFamily: 'monospace',
+        color: highlighted ? '#ff6b9d' : '#6060a0',
+        letterSpacing: '0.05em',
+        lineHeight: 1,
+      }}>
+        {label}
+      </span>
+    </button>
   );
 }
