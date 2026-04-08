@@ -1,0 +1,3 @@
+[submodule "vendor/propolis"]
+	path = vendor/propolis
+	url = https://github.com/phma/propolis
