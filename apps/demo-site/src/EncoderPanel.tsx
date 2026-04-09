@@ -185,8 +185,8 @@ export function EncoderPanel({ colors, text, setText, result }: Props) {
           </div>
 
           <p style={{ marginTop: '0.75rem', color: 'var(--text-dim)', fontSize: '0.75rem', lineHeight: 1.6, opacity: 0.7 }}>
-            <strong>Simplified encoding</strong> — bits packed 5-at-a-time without Hamming error
-            correction or criss-cross rearrangement. Full encoding accuracy arrives with the WASM build.
+            Encoding mode 8 (raw bytes) · Hamming ECC · criss-cross interleaving · whitening —
+            compatible with the reference C++ decoder.
           </p>
         </div>
 
