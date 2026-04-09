@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { LetterGlyph } from './LetterGlyph.js';
 import { EncoderPanel } from './EncoderPanel.js';
+import { QRComparison } from './QRComparison.js';
 import { LETTER_PATTERNS } from '@propolis-tools/renderer';
 import { themeColors, resolveTheme, type Theme } from './theme.js';
+import { encodeText } from './encode.js';
 
 function getInitialTheme(): Theme {
   try {
@@ -58,6 +60,8 @@ export function App() {
     }
     window.history.replaceState(null, '', url.toString());
   }, [text]);
+
+  const result = useMemo(() => encodeText(text), [text]);
 
   const dataLetters = LETTER_PATTERNS.slice(0, 32);
   const borderLetters = LETTER_PATTERNS.slice(32);
@@ -122,7 +126,10 @@ export function App() {
       </header>
 
       {/* ── Encoder ── */}
-      <EncoderPanel colors={colors} text={text} setText={setText} />
+      <EncoderPanel colors={colors} text={text} setText={setText} result={result} />
+
+      {/* ── QR Comparison ── */}
+      <QRComparison text={text} result={result} colors={colors} applied={applied} />
 
       {/* ── How it works ── */}
       <section style={{ marginBottom: '3rem' }}>

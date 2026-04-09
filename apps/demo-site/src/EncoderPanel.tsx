@@ -1,7 +1,7 @@
-import { useState, useMemo, useRef } from 'react';
-import { encodeText } from './encode.js';
+import { useState, useRef } from 'react';
 import { PropolisSymbol } from './PropolisSymbol.js';
 import type { ThemeColors } from './theme.js';
+import type { EncodeResult } from './encode.js';
 
 const EXAMPLES = [
   'propolis',
@@ -14,13 +14,12 @@ interface Props {
   colors: ThemeColors;
   text: string;
   setText: (t: string) => void;
+  result: EncodeResult;
 }
 
-export function EncoderPanel({ colors, text, setText }: Props) {
+export function EncoderPanel({ colors, text, setText, result }: Props) {
   const [copied, setCopied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const result = useMemo(() => encodeText(text), [text]);
 
   const usedPct = result.bytesEncoded / result.byteCapacity;
   const fillColor = usedPct > 0.9 ? '#ef4444' : usedPct > 0.7 ? '#f59e0b' : '#22c55e';
