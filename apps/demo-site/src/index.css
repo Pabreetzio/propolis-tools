@@ -1,5 +1,6 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Dark mode (default) ── */
 :root {
   --bg: #0f0f1a;
   --surface: #1a1a2e;
@@ -9,6 +10,24 @@
   --text: #e8e8f4;
   --text-dim: #9090b0;
   --border: #2e2e4a;
+  --input-bg: #0e0e20;
+  --card-bg: #1a1a2e;
+  --toggle-icon: '🌙';
+}
+
+/* ── Bee / Light mode ── */
+:root[data-theme="light"] {
+  --bg: #fef3c7;
+  --surface: #fde68a;
+  --surface2: #fcd34d;
+  --accent: #b45309;
+  --accent2: #92400e;
+  --text: #1c1917;
+  --text-dim: #78716c;
+  --border: #d9770688;
+  --input-bg: #fff8e6;
+  --card-bg: #fef9e8;
+  --toggle-icon: '☀️';
 }
 
 body {
@@ -17,14 +36,10 @@ body {
   color: var(--text);
   min-height: 100vh;
   line-height: 1.6;
+  transition: background 0.25s, color 0.25s;
 }
 
-h1, h2, h3 {
-  line-height: 1.2;
-}
+h1, h2, h3 { line-height: 1.2; }
 
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
+a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
