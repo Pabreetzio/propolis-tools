@@ -26,3 +26,16 @@ export function hvecScale(a: HVec, s: number): HVec {
 export function hvecNorm(a: HVec): number {
   return a.x * a.x + a.y * a.y - a.x * a.y;
 }
+
+/**
+ * Eisenstein integer multiplication: (ax + ay·ω)(bx + by·ω)
+ * where ω² = ω - 1 (since ω = e^{2πi/3}).
+ * Result: x = ax·bx - ay·by, y = ax·by + ay·bx - ay·by
+ * Matches C++ hvec::operator*.
+ */
+export function hvecMul(a: HVec, b: HVec): HVec {
+  return {
+    x: a.x * b.x - a.y * b.y,
+    y: a.x * b.y + a.y * b.x - a.y * b.y,
+  };
+}

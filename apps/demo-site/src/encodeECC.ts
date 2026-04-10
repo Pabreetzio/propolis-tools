@@ -388,3 +388,30 @@ export function encodeTextECC(text: string): EncodeResult {
     truncated: false,
   };
 }
+
+// ── Test exports (internal functions exposed for unit testing) ────────────────
+
+export const _test_databits = databits;
+export const _test_arrangeHamming = arrangeHamming;
+export const _test_crissCrossFactor = crissCrossFactor;
+export const _test_whiten = whiten;
+export const _test_appendCheckLetters = appendCheckLetters;
+export const _test_hammingEncode = hammingEncode;
+export const _test_findSize = findSize;
+
+export function _test_encodeByte(text: string): number[] {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(text);
+  const letterChars: number[] = [];
+  let buf = 0, bits = 0;
+  for (const byte of bytes) {
+    buf = (buf << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      letterChars.push(0x40 | ((buf >> bits) & 0x1f));
+    }
+  }
+  if (bits > 0) letterChars.push(0x40 | ((buf << (5 - bits)) & 0x1f));
+  return letterChars;
+}

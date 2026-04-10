@@ -2,26 +2,22 @@ import type { HVec } from './types.js';
 
 /**
  * The 12 relative hvec offsets within each letter, from letters.cpp.
- * Bit 11 is index 0 (twelve[0]), bit 0 is index 11 (twelve[11]).
- * Groups by y row:
- *   y=-2: indices 0,1,2  (3 dots)
- *   y=-1: indices 3,4,5,6  (4 dots)
- *   y= 0: indices 7,8,9  (3 dots)
- *   y=+1: indices 10,11  (2 dots)
+ * Index i corresponds to bit i (LSB = index 0). Matches C++ drawletter:
+ *   canvas[place*LETTERMOD + twelve[i]] = (letter >> i) & 1
  */
 export const TWELVE: readonly HVec[] = [
-  { x:  0, y: -2 }, // bit 11
-  { x: -1, y: -2 }, // bit 10
-  { x: -2, y: -2 }, // bit 9
-  { x:  1, y: -1 }, // bit 8
-  { x:  0, y: -1 }, // bit 7
-  { x: -1, y: -1 }, // bit 6
-  { x: -2, y: -1 }, // bit 5
-  { x:  1, y:  0 }, // bit 4
-  { x:  0, y:  0 }, // bit 3
-  { x: -1, y:  0 }, // bit 2
-  { x:  1, y:  1 }, // bit 1
-  { x:  0, y:  1 }, // bit 0
+  { x:  0, y: -2 }, // bit 0
+  { x: -1, y: -2 }, // bit 1
+  { x: -2, y: -2 }, // bit 2
+  { x:  1, y: -1 }, // bit 3
+  { x:  0, y: -1 }, // bit 4
+  { x: -1, y: -1 }, // bit 5
+  { x: -2, y: -1 }, // bit 6
+  { x:  1, y:  0 }, // bit 7
+  { x:  0, y:  0 }, // bit 8
+  { x: -1, y:  0 }, // bit 9
+  { x:  1, y:  1 }, // bit 10
+  { x:  0, y:  1 }, // bit 11
 ];
 
 /**
@@ -73,11 +69,12 @@ export const LETTER_PATTERNS: readonly number[] = [
 
 /**
  * Get the 12 filled/empty states for a letter pattern.
- * Returns array of 12 booleans, index 0 = bit 11 (TWELVE[0]).
+ * Returns array of 12 booleans, index i = bit i (LSB = TWELVE[0]).
+ * Matches C++ drawletter: canvas[place+twelve[i]] = (letter >> i) & 1.
  */
 export function letterBits(pattern: number): boolean[] {
   const bits: boolean[] = [];
-  for (let i = 11; i >= 0; i--) {
+  for (let i = 0; i <= 11; i++) {
     bits.push(((pattern >> i) & 1) === 1);
   }
   return bits;

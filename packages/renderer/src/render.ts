@@ -1,6 +1,9 @@
 import type { HVec, Point, PlacedLetter, BitCanvas, RenderOptions } from './types.js';
-import { toCartesian, hvecAdd } from './hvec.js';
+import { toCartesian, hvecAdd, hvecMul } from './hvec.js';
 import { TWELVE, LETTER_PATTERNS, letterBits } from './letters.js';
+
+/** Eisenstein scale factor applied to letter centers before placing sub-dots. */
+const LETTERMOD: HVec = { x: -2, y: -4 };
 
 const DEFAULTS: Required<RenderOptions> = {
   dotRadius: 0.42,
@@ -25,8 +28,9 @@ export function buildBitCanvas(
 
   for (const { letterIndex, center } of letters) {
     const bits = letterBits(LETTER_PATTERNS[letterIndex] ?? 0);
+    const scaledCenter = hvecMul(center, LETTERMOD);
     for (let i = 0; i < 12; i++) {
-      const pos = hvecAdd(center, TWELVE[i]);
+      const pos = hvecAdd(scaledCenter, TWELVE[i]);
       const key = `${pos.x},${pos.y}`;
       const cart = toCartesian(pos, spacing);
       const existing = map.get(key);
