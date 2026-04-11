@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .bg { fill: #0f0f1a; }
+    .hf { fill: #f59f0a; }
+    .he { fill: none; stroke: #f59f0a; stroke-width: 0.4; opacity: 0.25; }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #fffbeb; }
+      .hf { fill: #92400e; }
+      .he { fill: none; stroke: #92400e; stroke-width: 0.4; opacity: 0.25; }
+    }
+  </style>
+  <!-- rounded background -->
+  <rect class="bg" width="32" height="32" rx="6"/>
+  <!-- pointy-top hexagon template: circumradius 2.5, centered at origin -->
+  <defs>
+    <polygon id="h" points="2.165,1.25 0,2.5 -2.165,1.25 -2.165,-1.25 0,-2.5 2.165,-1.25"/>
+  </defs>
+
+  <!-- Center hex -->
+  <use href="#h" class="hf" transform="translate(16,16)"/>
+
+  <!-- Ring 1: (q,r) → x=16+5.196q+2.598r, y=16+4.5r -->
+  <!-- (1,0)  → filled  --> <use href="#h" class="hf" transform="translate(21.2,16)"/>
+  <!-- (1,-1) → empty   --> <use href="#h" class="he" transform="translate(18.6,11.5)"/>
+  <!-- (0,-1) → filled  --> <use href="#h" class="hf" transform="translate(13.4,11.5)"/>
+  <!-- (-1,0) → empty   --> <use href="#h" class="he" transform="translate(10.8,16)"/>
+  <!-- (-1,1) → filled  --> <use href="#h" class="hf" transform="translate(13.4,20.5)"/>
+  <!-- (0,1)  → empty   --> <use href="#h" class="he" transform="translate(18.6,20.5)"/>
+
+  <!-- Ring 2: all filled (outer border of the code) -->
+  <!-- (2,0)   --> <use href="#h" class="hf" transform="translate(26.4,16)"/>
+  <!-- (2,-1)  --> <use href="#h" class="hf" transform="translate(23.8,11.5)"/>
+  <!-- (2,-2)  --> <use href="#h" class="hf" transform="translate(21.2,7)"/>
+  <!-- (1,-2)  --> <use href="#h" class="hf" transform="translate(16,7)"/>
+  <!-- (0,-2)  --> <use href="#h" class="hf" transform="translate(10.8,7)"/>
+  <!-- (-1,-1) --> <use href="#h" class="hf" transform="translate(8.2,11.5)"/>
+  <!-- (-2,0)  --> <use href="#h" class="hf" transform="translate(5.6,16)"/>
+  <!-- (-2,1)  --> <use href="#h" class="hf" transform="translate(8.2,20.5)"/>
+  <!-- (-2,2)  --> <use href="#h" class="hf" transform="translate(10.8,25)"/>
+  <!-- (-1,2)  --> <use href="#h" class="hf" transform="translate(16,25)"/>
+  <!-- (0,2)   --> <use href="#h" class="hf" transform="translate(21.2,25)"/>
+  <!-- (1,1)   --> <use href="#h" class="hf" transform="translate(23.8,20.5)"/>
+</svg>
