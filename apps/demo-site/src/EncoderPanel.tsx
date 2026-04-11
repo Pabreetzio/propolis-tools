@@ -45,6 +45,32 @@ export function EncoderPanel({ colors, text, setText, result }: Props) {
     URL.revokeObjectURL(url);
   }
 
+  function downloadPNG() {
+    const svgEl = document.querySelector('#propolis-output svg') as SVGElement | null;
+    if (!svgEl) return;
+    const scale = 4;
+    const w = svgEl.clientWidth || symbolSize;
+    const h = svgEl.clientHeight || symbolSize;
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const blob = new Blob([svgData], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w * scale;
+      canvas.height = h * scale;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, w * scale, h * scale);
+      URL.revokeObjectURL(url);
+      const pngUrl = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = pngUrl;
+      a.download = `propolis-${text.slice(0, 20).replace(/\W+/g, '-') || 'code'}.png`;
+      a.click();
+    };
+    img.src = url;
+  }
+
   return (
     <section style={{ marginBottom: '3rem' }}>
       <div style={{ display: 'flex', gap: '2.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -161,7 +187,25 @@ export function EncoderPanel({ colors, text, setText, result }: Props) {
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--text)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-dim)'; }}
             >
-              ↓ Download SVG
+              ↓ SVG
+            </button>
+            <button
+              onClick={downloadPNG}
+              style={{
+                flex: 1,
+                padding: '0.5rem 1rem',
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+                background: 'transparent',
+                color: 'var(--text-dim)',
+                cursor: 'pointer',
+                fontSize: '0.825rem',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--text)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-dim)'; }}
+            >
+              ↓ PNG
             </button>
             <button
               onClick={copyLink}
