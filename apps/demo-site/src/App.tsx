@@ -33,6 +33,8 @@ export function App() {
   );
   const [text, setText] = useState<string>(getInitialText);
   const [selectedLetter, setSelectedLetter] = useState<number | null>(null);
+  const [propolisRedundancy, setPropolisRedundancy] = useState(0);
+  const [qrLevel, setQrLevel] = useState<'L' | 'M' | 'Q' | 'H'>('M');
 
   const applied = theme === 'system' ? systemPrefers : theme;
   const colors = themeColors[applied];
@@ -63,9 +65,9 @@ export function App() {
   }, [text]);
 
   const result = useMemo(() => {
-    try { return encodeTextECC(text); }
+    try { return encodeTextECC(text, propolisRedundancy); }
     catch { return encodeText(text); }   // fallback to simplified if ECC fails
-  }, [text]);
+  }, [text, propolisRedundancy]);
 
   const dataLetters = LETTER_PATTERNS.slice(0, 32);
   const borderLetters = LETTER_PATTERNS.slice(32);
@@ -130,10 +132,16 @@ export function App() {
       </header>
 
       {/* ── Encoder ── */}
-      <EncoderPanel colors={colors} text={text} setText={setText} result={result} />
+      <EncoderPanel
+        colors={colors} text={text} setText={setText} result={result}
+        propolisRedundancy={propolisRedundancy} onRedundancyChange={setPropolisRedundancy}
+      />
 
       {/* ── QR Comparison ── */}
-      <QRComparison text={text} result={result} colors={colors} applied={applied} />
+      <QRComparison
+        text={text} result={result} colors={colors} applied={applied}
+        qrLevel={qrLevel} onQrLevelChange={setQrLevel}
+      />
 
       {/* ── How it works ── */}
       <section style={{ marginBottom: '3rem' }}>

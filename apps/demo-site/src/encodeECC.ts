@@ -292,7 +292,7 @@ function* hvecIterate(size: number): Generator<[number, number]> {
 
 // ── Main encoder ──────────────────────────────────────────────────────────────
 
-export function encodeTextECC(text: string): EncodeResult {
+export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(text);
 
@@ -310,7 +310,7 @@ export function encodeTextECC(text: string): EncodeResult {
   if (bits > 0) letterChars.push(0x40 | ((buf << (5 - bits)) & 0x1f));
 
   // Step 2 — find symbol size and Hamming block layout
-  const sr = findSize(letterChars.length);
+  const sr = findSize(letterChars.length, redundancy);
   if (!sr) throw new Error(`Text too long for max radius ${MAX_RADIUS}`);
   const { size, nLetters, nDataCheck, hammingSizes, nBlocks } = sr;
 
@@ -386,6 +386,7 @@ export function encodeTextECC(text: string): EncodeResult {
     bytesEncoded: bytes.length,
     byteCapacity: Math.floor(nDataCheck * 5 / 8),
     truncated: false,
+    redundancy: nBlocks > 0 ? (nLetters - nDataCheck) / nLetters : 0,
   };
 }
 

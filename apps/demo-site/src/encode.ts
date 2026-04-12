@@ -31,6 +31,8 @@ export interface EncodeResult {
   byteCapacity: number;
   /** True if input had to be truncated to fit */
   truncated: boolean;
+  /** Actual achieved redundancy fraction (0–0.65), undefined for simplified encoder */
+  redundancy?: number;
 }
 
 export function encodeText(text: string): EncodeResult {

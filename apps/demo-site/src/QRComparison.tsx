@@ -4,16 +4,44 @@ import { renderToSVG } from '@propolis-tools/renderer';
 import type { ThemeColors } from './theme.js';
 import type { EncodeResult } from './encode.js';
 
-// QR byte-mode capacity at M error-correction level, versions 1-40
-const QR_BYTES_M = [
-  17, 32, 53, 78, 106, 134, 154, 192, 230, 271,
-  321, 367, 425, 458, 520, 586, 644, 718, 792, 858,
-  929, 1003, 1091, 1171, 1273, 1367, 1465, 1528, 1628, 1732,
-  1840, 1952, 2068, 2188, 2303, 2431, 2563, 2699, 2809, 2953,
-];
+// QR byte-mode capacity per version (1–40) at each error-correction level (ISO 18004)
+const QR_BYTES: Record<'L' | 'M' | 'Q' | 'H', number[]> = {
+  L: [
+     17,  32,  53,  78, 106, 134, 154, 192, 230, 271,
+    321, 367, 425, 458, 520, 586, 644, 718, 792, 858,
+    929, 1003, 1091, 1171, 1273, 1367, 1465, 1528, 1628, 1732,
+   1840, 1952, 2068, 2188, 2303, 2431, 2563, 2699, 2809, 2953,
+  ],
+  M: [
+     14,  26,  42,  62,  84, 106, 122, 152, 180, 213,
+    251, 287, 331, 362, 412, 450, 504, 560, 624, 666,
+    711, 779, 857, 911, 997, 1059, 1125, 1190, 1264, 1370,
+   1452, 1538, 1628, 1722, 1809, 1911, 1989, 2099, 2213, 2331,
+  ],
+  Q: [
+     11,  20,  32,  46,  60,  74,  86, 108, 130, 151,
+    177, 203, 241, 258, 292, 322, 364, 394, 442, 482,
+    509, 565, 611, 661, 715, 751, 805, 868, 908, 982,
+   1030, 1112, 1168, 1228, 1283, 1351, 1423, 1499, 1579, 1663,
+  ],
+  H: [
+      7,  14,  24,  34,  44,  58,  64,  84,  98, 119,
+    137, 155, 177, 194, 220, 250, 280, 310, 338, 382,
+    403, 439, 461, 511, 535, 593, 625, 658, 698, 742,
+    790, 842, 898, 958, 983, 1051, 1093, 1139, 1219, 1273,
+  ],
+};
 
-function qrVersion(bytes: number): number {
-  const v = QR_BYTES_M.findIndex(cap => cap >= Math.max(bytes, 1));
+const QR_LEVEL_LABELS: Record<'L' | 'M' | 'Q' | 'H', string> = {
+  L: 'L — ~7% recovery',
+  M: 'M — ~15% recovery',
+  Q: 'Q — ~25% recovery',
+  H: 'H — ~30% recovery',
+};
+
+function qrVersion(bytes: number, level: 'L' | 'M' | 'Q' | 'H'): number {
+  const table = QR_BYTES[level];
+  const v = table.findIndex(cap => cap >= Math.max(bytes, 1));
   return v === -1 ? 40 : v + 1;
 }
 
@@ -22,6 +50,8 @@ interface Props {
   result: EncodeResult;
   colors: ThemeColors;
   applied: 'dark' | 'light';
+  qrLevel: 'L' | 'M' | 'Q' | 'H';
+  onQrLevelChange: (level: 'L' | 'M' | 'Q' | 'H') => void;
 }
 
 /** Parse a SVG viewBox string and return { w, h } */
@@ -33,7 +63,7 @@ function parseViewBox(svg: string): { w: number; h: number } | null {
 
 const DISPLAY_SIZE = 260;
 
-export function QRComparison({ text, result, colors, applied }: Props) {
+export function QRComparison({ text, result, colors, applied, qrLevel, onQrLevelChange }: Props) {
   const [qrSvg, setQrSvg] = useState('');
 
   const qrDark  = applied === 'light' ? '#1c0800' : '#d0d0ff';
@@ -43,11 +73,11 @@ export function QRComparison({ text, result, colors, applied }: Props) {
     if (!text) { setQrSvg(''); return; }
     QRCode.toString(text, {
       type: 'svg',
-      errorCorrectionLevel: 'M',
+      errorCorrectionLevel: qrLevel,
       margin: 2,
       color: { dark: qrDark, light: qrLight },
     }).then(setQrSvg).catch(() => setQrSvg(''));
-  }, [text, qrDark, qrLight]);
+  }, [text, qrDark, qrLight, qrLevel]);
 
   // Render propolis SVG at comparison quality
   const propolisSvg = useMemo(() =>
@@ -70,7 +100,7 @@ export function QRComparison({ text, result, colors, applied }: Props) {
   const propoArea = pvb ? pvb.w * pvb.h : null;
 
   // QR: find version that fits same payload
-  const qrV = qrVersion(bytes);
+  const qrV = qrVersion(bytes, qrLevel);
   const qrModules = 4 * qrV + 17;  // modules per side (no quiet zone)
   const qrArea = qrModules * qrModules; // modules²
 
@@ -84,13 +114,36 @@ export function QRComparison({ text, result, colors, applied }: Props) {
     ? propoEquivArea / qrArea
     : null;
 
-  const qrCapacity = QR_BYTES_M[qrV - 1];
+  const qrCapacity = QR_BYTES[qrLevel][qrV - 1];
 
   return (
     <section style={{ marginBottom: '3rem' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
         <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Propolis vs QR Code</h2>
         <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>same message, same display size</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>QR ECC</span>
+          {(['L', 'M', 'Q', 'H'] as const).map(level => (
+            <button
+              key={level}
+              onClick={() => onQrLevelChange(level)}
+              title={QR_LEVEL_LABELS[level]}
+              style={{
+                padding: '0.2rem 0.55rem',
+                borderRadius: 5,
+                border: `1px solid ${qrLevel === level ? 'var(--accent)' : 'var(--border)'}`,
+                background: qrLevel === level ? 'var(--surface)' : 'transparent',
+                color: qrLevel === level ? 'var(--accent)' : 'var(--text-dim)',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: qrLevel === level ? 600 : 400,
+                transition: 'all 0.12s',
+              }}
+            >
+              {level}
+            </button>
+          ))}
+        </div>
       </div>
       <p style={{ color: 'var(--text-dim)', fontSize: '0.825rem', marginBottom: '1.25rem' }}>
         QR uses a square grid — propolis uses a hexagonal lattice, which packs dots ~15% more
@@ -173,10 +226,10 @@ export function QRComparison({ text, result, colors, applied }: Props) {
             note: 'Bounding box of the rendered symbol at equal dot pitch',
           },
           {
-            label: 'Capacity (M ECC)',
+            label: `Capacity (ECC ${qrLevel})`,
             propolis: `${result.byteCapacity} bytes`,
             qr: `${qrCapacity} bytes`,
-            note: 'How many bytes this size symbol can hold at medium error correction',
+            note: `How many bytes this size symbol can hold at ECC level ${qrLevel}`,
           },
           {
             label: 'Hex packing gain',

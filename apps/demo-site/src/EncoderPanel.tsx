@@ -10,14 +10,23 @@ const EXAMPLES = [
   '🐝',
 ];
 
+const REDUNDANCY_PRESETS: { label: string; value: number; description: string }[] = [
+  { label: 'Auto',   value: 0,    description: 'Minimum symbol size, basic error correction' },
+  { label: 'Low',    value: 0.20, description: '~20% redundancy target' },
+  { label: 'Medium', value: 0.40, description: '~40% redundancy target' },
+  { label: 'High',   value: 0.65, description: '~65% redundancy (near maximum)' },
+];
+
 interface Props {
   colors: ThemeColors;
   text: string;
   setText: (t: string) => void;
   result: EncodeResult;
+  propolisRedundancy: number;
+  onRedundancyChange: (r: number) => void;
 }
 
-export function EncoderPanel({ colors, text, setText, result }: Props) {
+export function EncoderPanel({ colors, text, setText, result, propolisRedundancy, onRedundancyChange }: Props) {
   const [copied, setCopied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -130,6 +139,38 @@ export function EncoderPanel({ colors, text, setText, result }: Props) {
             ))}
           </div>
 
+          {/* ECC preset selector */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.4rem' }}>
+              Error correction
+            </div>
+            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+              {REDUNDANCY_PRESETS.map(preset => {
+                const active = propolisRedundancy === preset.value;
+                return (
+                  <button
+                    key={preset.label}
+                    onClick={() => onRedundancyChange(preset.value)}
+                    title={preset.description}
+                    style={{
+                      padding: '0.25rem 0.65rem',
+                      borderRadius: 6,
+                      border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                      background: active ? 'var(--surface)' : 'transparent',
+                      color: active ? 'var(--accent)' : 'var(--text-dim)',
+                      cursor: 'pointer',
+                      fontSize: '0.775rem',
+                      fontWeight: active ? 600 : 400,
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Stats card */}
           <div style={{
             background: 'var(--card-bg)',
@@ -144,6 +185,9 @@ export function EncoderPanel({ colors, text, setText, result }: Props) {
                 ['Symbol size', `radius ${result.radius}`],
                 ['Data slots', `${result.dataSlots} letters`],
                 ['Capacity', `${result.byteCapacity} bytes`],
+                ...(result.redundancy !== undefined
+                  ? [['Redundancy', `${Math.round(result.redundancy * 100)}%`] as [string, string]]
+                  : []),
               ] as [string, string][]).map(([label, value]) => (
                 <div key={label}>
                   <div style={{ color: 'var(--text-dim)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.1rem' }}>{label}</div>
