@@ -1,16 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <style>
-    .bg { fill: #0f0f1a; }
     .hf { fill: #f59f0a; }
     .he { fill: none; stroke: #f59f0a; stroke-width: 0.4; opacity: 0.25; }
     @media (prefers-color-scheme: light) {
-      .bg { fill: #fffbeb; }
       .hf { fill: #92400e; }
       .he { fill: none; stroke: #92400e; stroke-width: 0.4; opacity: 0.25; }
     }
   </style>
-  <!-- rounded background -->
-  <rect class="bg" width="32" height="32" rx="6"/>
   <!-- pointy-top hexagon template: circumradius 2.5, centered at origin -->
   <defs>
     <polygon id="h" points="2.165,1.25 0,2.5 -2.165,1.25 -2.165,-1.25 0,-2.5 2.165,-1.25"/>
