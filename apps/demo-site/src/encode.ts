@@ -20,6 +20,32 @@ function sortedCenters(centers: HVec[]): HVec[] {
   });
 }
 
+/**
+ * Role of each letter in the encoded symbol. Used for hover tooltips.
+ *
+ * After criss-cross interleaving, individual 'data' cells don't map back
+ * to specific message bytes — their 5 bits are spread from across the
+ * Hamming-encoded blocks.
+ */
+export type LetterRoleKind =
+  | 'data'                    // carries 5 bits of scrambled, error-coded payload
+  | 'metadata-index'          // @ orientation marker — always letter 0 (all-white)
+  | 'metadata-encoding'       // encoding mode (mode 8 = raw bytes)
+  | 'metadata-nblocks-lo'     // (nBlocks − 1) mod 31 in GF(31)
+  | 'metadata-nblocks-hi'     // floor((nBlocks − 1) / 31) in GF(31)
+  | 'metadata-lagrange0'      // Lagrange error-check at x=0 over GF(31)
+  | 'metadata-lagrange1'      // Lagrange error-check at x=1 over GF(31)
+  | 'border-side'             // outer ring side letter (patterns 32–37)
+  | 'border-corner';          // outer ring corner letter (fixed data patterns)
+
+export interface LetterRole {
+  kind: LetterRoleKind;
+  /** For 'data': 0-based slot index within the data hex region */
+  dataIndex?: number;
+  /** For 'data': total number of data/ECC slots in the hex region */
+  totalSlots?: number;
+}
+
 export interface EncodeResult {
   letters: PlacedLetter[];
   radius: number;
@@ -33,6 +59,8 @@ export interface EncodeResult {
   truncated: boolean;
   /** Actual achieved redundancy fraction (0–0.65), undefined for simplified encoder */
   redundancy?: number;
+  /** Per-letter role annotations for hover tooltips (ECC encoder only) */
+  letterRoles?: LetterRole[];
 }
 
 export function encodeText(text: string): EncodeResult {

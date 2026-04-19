@@ -108,6 +108,30 @@ export function renderToSVG(
 }
 
 /**
+ * Compute each letter's center position in SVG viewBox coordinates.
+ * Returns one {x, y} per letter in the same order as the input array.
+ *
+ * The opts should match those passed to renderToSVG so the coordinate
+ * systems align. Useful for hover hit-testing without parsing the SVG.
+ */
+export function letterCentersInViewBox(
+  letters: PlacedLetter[],
+  opts: RenderOptions = {},
+): Point[] {
+  const spacing = opts.gridSpacing ?? DEFAULTS.gridSpacing;
+  const pad = opts.padding ?? DEFAULTS.padding;
+  const canvas = buildBitCanvas(letters, spacing);
+  const ox = -canvas.bounds.minX + pad;
+  const oy = -canvas.bounds.minY + pad;
+
+  return letters.map(({ center }) => {
+    const scaled = hvecMul(center, LETTERMOD);
+    const cart = toCartesian(scaled, spacing);
+    return { x: cart.x + ox, y: cart.y + oy };
+  });
+}
+
+/**
  * Render a single letter pattern to SVG (useful for galleries/debugging).
  */
 export function renderLetterToSVG(

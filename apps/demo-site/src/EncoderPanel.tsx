@@ -290,7 +290,12 @@ export function EncoderPanel({ colors, text, setText, result, propolisRedundancy
               display: 'inline-flex',
             }}
           >
-            <PropolisSymbol letters={result.letters} size={symbolSize} colors={colors} />
+            <PropolisSymbol
+              letters={result.letters}
+              size={symbolSize}
+              colors={colors}
+              letterRoles={result.letterRoles}
+            />
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', textAlign: 'center' }}>
             {text.length === 0 ? 'Enter a message above' : `${result.letters.length} letters · radius ${result.radius}`}

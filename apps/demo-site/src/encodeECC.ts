@@ -5,7 +5,7 @@
  */
 
 import type { PlacedLetter, HVec } from '@propolis-tools/renderer';
-import type { EncodeResult } from './encode.js';
+import type { EncodeResult, LetterRole } from './encode.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -281,25 +281,29 @@ function lagrangeCheck(known: [number, number, number, number]): [number, number
  * (0,n) uses letter 24 (0x266, 6/12 dots) — these appear visually lighter
  * ("white corners") against the mostly-filled border, establishing orientation.
  */
-function buildBorder(dataSize: number): PlacedLetter[] {
+function buildBorder(dataSize: number): { letters: PlacedLetter[]; roles: LetterRole[] } {
   const n = dataSize + 1;
-  const result: PlacedLetter[] = [];
+  const letters: PlacedLetter[] = [];
+  const roles: LetterRole[] = [];
+  const side = (): void => { roles.push({ kind: 'border-side' }); };
+  const corner = (): void => { roles.push({ kind: 'border-corner' }); };
+
   for (let i = 1; i < n; i++) {
-    result.push({ center: { x:  n, y:  i },    letterIndex: 32 }); // 0x20
-    result.push({ center: { x:  i, y:  n },    letterIndex: 33 }); // 0x21
-    result.push({ center: { x: -i, y: n - i }, letterIndex: 34 }); // 0x22
-    result.push({ center: { x: -n, y: -i },    letterIndex: 35 }); // 0x23
-    result.push({ center: { x: -i, y: -n },    letterIndex: 36 }); // 0x24
-    result.push({ center: { x:  i, y: i - n }, letterIndex: 37 }); // 0x25
+    letters.push({ center: { x:  n, y:  i },    letterIndex: 32 }); side(); // 0x20
+    letters.push({ center: { x:  i, y:  n },    letterIndex: 33 }); side(); // 0x21
+    letters.push({ center: { x: -i, y: n - i }, letterIndex: 34 }); side(); // 0x22
+    letters.push({ center: { x: -n, y: -i },    letterIndex: 35 }); side(); // 0x23
+    letters.push({ center: { x: -i, y: -n },    letterIndex: 36 }); side(); // 0x24
+    letters.push({ center: { x:  i, y: i - n }, letterIndex: 37 }); side(); // 0x25
   }
   // 6 corners — specific data letters matching the C++ reference
-  result.push({ center: { x:  n, y:  0 }, letterIndex:  2 }); // 0x02
-  result.push({ center: { x:  n, y:  n }, letterIndex: 26 }); // 0x1a
-  result.push({ center: { x:  0, y:  n }, letterIndex: 24 }); // 0x18
-  result.push({ center: { x: -n, y:  0 }, letterIndex: 29 }); // 0x1d
-  result.push({ center: { x: -n, y: -n }, letterIndex:  5 }); // 0x05
-  result.push({ center: { x:  0, y: -n }, letterIndex:  7 }); // 0x07
-  return result;
+  letters.push({ center: { x:  n, y:  0 }, letterIndex:  2 }); corner(); // 0x02
+  letters.push({ center: { x:  n, y:  n }, letterIndex: 26 }); corner(); // 0x1a
+  letters.push({ center: { x:  0, y:  n }, letterIndex: 24 }); corner(); // 0x18
+  letters.push({ center: { x: -n, y:  0 }, letterIndex: 29 }); corner(); // 0x1d
+  letters.push({ center: { x: -n, y: -n }, letterIndex:  5 }); corner(); // 0x05
+  letters.push({ center: { x:  0, y: -n }, letterIndex:  7 }); corner(); // 0x07
+  return { letters, roles };
 }
 
 // ── HVec iteration (mirrors C++ start/inc/cont) ───────────────────────────────
@@ -395,23 +399,40 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
     [`${-size},${-size}`, lc0 + 0x41],                    // Lagrange check 0
   ]);
 
+  // Corner role map — maps corner key to its metadata role kind
+  const cornerRoles = new Map<string, LetterRole>([
+    [`${-size},0`,          { kind: 'metadata-index' }],
+    [`0,${size}`,           { kind: 'metadata-nblocks-hi' }],
+    [`${size},${size}`,     { kind: 'metadata-nblocks-lo' }],
+    [`${size},0`,           { kind: 'metadata-encoding' }],
+    [`0,${-size}`,          { kind: 'metadata-lagrange1' }],
+    [`${-size},${-size}`,   { kind: 'metadata-lagrange0' }],
+  ]);
+
   // Step 8 — place letters in hex grid (canonical iteration order)
   const letters: PlacedLetter[] = [];
+  const roles: LetterRole[] = [];
   let dataIdx = 0;
+  let dataSlotIdx = 0;
 
   for (const [x, y] of hvecIterate(size)) {
     const center: HVec = { x, y };
     const key = `${x},${y}`;
     if (cornerMap.has(key)) {
       letters.push({ center, letterIndex: cornerMap.get(key)! & 0x1f });
+      roles.push(cornerRoles.get(key)!);
     } else {
       const charVal = dataIdx < data.length ? data[dataIdx++] : 0x40;
       letters.push({ center, letterIndex: charVal & 0x1f });
+      roles.push({ kind: 'data', dataIndex: dataSlotIdx, totalSlots: nLetters });
+      dataSlotIdx++;
     }
   }
 
   // Step 9 — add the border ring
-  const allLetters = [...letters, ...buildBorder(size)];
+  const border = buildBorder(size);
+  const allLetters = [...letters, ...border.letters];
+  const allRoles = [...roles, ...border.roles];
 
   return {
     letters: allLetters,
@@ -421,6 +442,7 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
     byteCapacity: Math.floor(nDataCheck * 5 / 8),
     truncated: false,
     redundancy: nBlocks > 0 ? (nLetters - nDataCheck) / nLetters : 0,
+    letterRoles: allRoles,
   };
 }
 
