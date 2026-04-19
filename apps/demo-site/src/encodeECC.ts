@@ -271,6 +271,37 @@ function lagrangeCheck(known: [number, number, number, number]): [number, number
   return [((p0 % 31) + 31) % 31, ((p1 % 31) + 31) % 31];
 }
 
+// ── Border ring (port of C++ border(n)) ──────────────────────────────────────
+
+/**
+ * Build the border ring of letters surrounding a data hexagon of given radius.
+ * Direct port of C++ border(n): side letters 32–37 on each of the 6 sides,
+ * and specific data letters at the 6 corner positions for orientation.
+ * The corner at (-n,-n) uses letter 5 (0x09b, 6/12 dots) and the corner at
+ * (0,n) uses letter 24 (0x266, 6/12 dots) — these appear visually lighter
+ * ("white corners") against the mostly-filled border, establishing orientation.
+ */
+function buildBorder(dataSize: number): PlacedLetter[] {
+  const n = dataSize + 1;
+  const result: PlacedLetter[] = [];
+  for (let i = 1; i < n; i++) {
+    result.push({ center: { x:  n, y:  i },    letterIndex: 32 }); // 0x20
+    result.push({ center: { x:  i, y:  n },    letterIndex: 33 }); // 0x21
+    result.push({ center: { x: -i, y: n - i }, letterIndex: 34 }); // 0x22
+    result.push({ center: { x: -n, y: -i },    letterIndex: 35 }); // 0x23
+    result.push({ center: { x: -i, y: -n },    letterIndex: 36 }); // 0x24
+    result.push({ center: { x:  i, y: i - n }, letterIndex: 37 }); // 0x25
+  }
+  // 6 corners — specific data letters matching the C++ reference
+  result.push({ center: { x:  n, y:  0 }, letterIndex:  2 }); // 0x02
+  result.push({ center: { x:  n, y:  n }, letterIndex: 26 }); // 0x1a
+  result.push({ center: { x:  0, y:  n }, letterIndex: 24 }); // 0x18
+  result.push({ center: { x: -n, y:  0 }, letterIndex: 29 }); // 0x1d
+  result.push({ center: { x: -n, y: -n }, letterIndex:  5 }); // 0x05
+  result.push({ center: { x:  0, y: -n }, letterIndex:  7 }); // 0x07
+  return result;
+}
+
 // ── HVec iteration (mirrors C++ start/inc/cont) ───────────────────────────────
 
 function hvecNorm(x: number, y: number): number {
@@ -379,8 +410,11 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
     }
   }
 
+  // Step 9 — add the border ring
+  const allLetters = [...letters, ...buildBorder(size)];
+
   return {
-    letters,
+    letters: allLetters,
     radius: size,
     dataSlots: nLetters,
     bytesEncoded: bytes.length,
