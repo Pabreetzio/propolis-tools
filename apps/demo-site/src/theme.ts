@@ -46,11 +46,11 @@ export const themeColors: Record<'dark' | 'light', ThemeColors> = {
     glyphLabelHighColor: '#ff6b9d',
   },
   light: {
-    // Capped cells: bright warm gold — like wax-sealed honey
-    symbolOn: '#f59e0b',
-    // Empty holes: near-black dark brown — looking into an empty cell
-    symbolOff: '#1c0800',
-    // Wax between cells: medium amber — closer to capped cell color per spec
+    // Filled cells: near-black dark brown — the dark pattern, like Pierre's PS output
+    symbolOn: '#1c0800',
+    // Empty cells: bright warm gold — the open honeycomb background
+    symbolOff: '#f59e0b',
+    // Wax between cells: medium amber
     symbolBg: '#c47a0a',
 
     glyphOn: '#92400e',      // rich dark amber — readable at small sizes

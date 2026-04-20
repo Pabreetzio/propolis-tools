@@ -34,8 +34,10 @@ export function buildBitCanvas(
       const key = `${pos.x},${pos.y}`;
       const cart = toCartesian(pos, spacing);
       const existing = map.get(key);
+      // Negate y so the SVG orientation matches Pierre's PostScript (y-up) rendering.
+      // Without this, the whole symbol and individual letter patterns are upside-down.
       map.set(key, {
-        cart,
+        cart: { x: cart.x, y: -cart.y },
         filled: (existing?.filled ?? false) || bits[i],
       });
     }
@@ -127,7 +129,8 @@ export function letterCentersInViewBox(
   return letters.map(({ center }) => {
     const scaled = hvecMul(center, LETTERMOD);
     const cart = toCartesian(scaled, spacing);
-    return { x: cart.x + ox, y: cart.y + oy };
+    // Negate y to match the y-flip applied in buildBitCanvas
+    return { x: cart.x + ox, y: -cart.y + oy };
   });
 }
 
