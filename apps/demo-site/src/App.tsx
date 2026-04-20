@@ -6,6 +6,7 @@ import { LETTER_PATTERNS } from '@propolis-tools/renderer';
 import { themeColors, resolveTheme, type Theme } from './theme.js';
 import { encodeText } from './encode.js';
 import { encodeTextECC } from './encodeECC.js';
+import { EncodingPipeline } from './EncodingPipeline.js';
 
 function getInitialTheme(): Theme {
   try {
@@ -137,6 +138,9 @@ export function App() {
         propolisRedundancy={propolisRedundancy} onRedundancyChange={setPropolisRedundancy}
       />
 
+      {/* ── Encoding Pipeline ── */}
+      <EncodingPipeline result={result} colors={colors} />
+
       {/* ── QR Comparison ── */}
       <QRComparison
         text={text} result={result} colors={colors} applied={applied}
@@ -168,7 +172,8 @@ export function App() {
           <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>click any letter to inspect</span>
         </div>
         <p style={{ color: 'var(--text-dim)', fontSize: '0.825rem', marginBottom: '1.25rem' }}>
-          32 data letters (labeled with 5-bit value) and 6 border letters — each a 12-dot Eisenstein-grid cluster.
+          32 data letters named <code>@</code> through <code>_</code> (Pierre's internal alphabet — index + 0x40) and 6 border letters.
+          Each is a 12-dot Eisenstein-grid cluster encoding one 5-bit value.
         </p>
 
         {/* Selected letter detail — above gallery so it's always visible */}
@@ -189,15 +194,19 @@ export function App() {
             </div>
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.4rem' }}>
-                Letter {sel}
-                {sel < 32 && (
-                  <span style={{ color: 'var(--text-dim)', fontWeight: 400, marginLeft: '0.5rem', fontSize: '0.875rem' }}>
-                    · 5-bit value <code style={{ color: 'var(--accent)' }}>{sel.toString(2).padStart(5, '0')}</code>
-                    <span style={{ color: 'var(--text-dim)', opacity: 0.5 }}> ({sel})</span>
-                  </span>
-                )}
-                {sel >= 32 && (
-                  <span style={{ color: 'var(--text-dim)', fontWeight: 400, marginLeft: '0.5rem', fontSize: '0.875rem' }}>· border letter</span>
+                {sel < 32 ? (
+                  <>
+                    Letter{' '}
+                    <code style={{ color: 'var(--accent)', fontSize: '1.1rem' }}>
+                      {String.fromCharCode(0x40 + sel)}
+                    </code>
+                    <span style={{ color: 'var(--text-dim)', fontWeight: 400, marginLeft: '0.5rem', fontSize: '0.875rem' }}>
+                      · index {sel} · 5-bit{' '}
+                      <code style={{ color: 'var(--accent)' }}>{sel.toString(2).padStart(5, '0')}</code>
+                    </span>
+                  </>
+                ) : (
+                  <>Border letter b{sel - 32}</>
                 )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.825rem', color: 'var(--text-dim)' }}>

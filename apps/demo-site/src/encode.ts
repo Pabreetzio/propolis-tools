@@ -46,6 +46,22 @@ export interface LetterRole {
   totalSlots?: number;
 }
 
+/** Intermediate representations exposed for the visual pipeline display. */
+export interface EncodePipeline {
+  /** Raw UTF-8 bytes of the message */
+  utf8Bytes: number[];
+  /** One entry per 5-bit group from the message bytes, as Pierre's letter names (@…_) */
+  rawLetterNames: string[];
+  /** Check letters appended for error detection (same naming, shown separately) */
+  checkLetterNames: string[];
+  /** The 6 metadata corners placed at fixed positions in the data hexagon */
+  cornerLetters: Array<{
+    name: string;   // Pierre's letter name (@ through _)
+    index: number;  // 5-bit index (0–31)
+    role: string;   // human-readable purpose
+  }>;
+}
+
 export interface EncodeResult {
   letters: PlacedLetter[];
   radius: number;
@@ -61,6 +77,8 @@ export interface EncodeResult {
   redundancy?: number;
   /** Per-letter role annotations for hover tooltips (ECC encoder only) */
   letterRoles?: LetterRole[];
+  /** Intermediate pipeline steps for the visual pipeline display (ECC encoder only) */
+  pipeline?: EncodePipeline;
 }
 
 export function encodeText(text: string): EncodeResult {

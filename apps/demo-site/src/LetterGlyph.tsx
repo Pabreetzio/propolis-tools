@@ -26,14 +26,14 @@ export function LetterGlyph({ index, size = 96, highlighted = false, onClick, co
     }),
   [index, highlighted, colors]);
 
-  const label = isData
-    ? index.toString(2).padStart(5, '0')
-    : `B${index - 32}`;
+  // Pierre names each data letter with the ASCII char at (index + 0x40): @ A B … _
+  const letterName = isData ? String.fromCharCode(0x40 + index) : `b${index - 32}`;
+  const label = isData ? letterName : `b${index - 32}`;
 
   return (
     <button
       onClick={onClick}
-      title={`Letter ${index} · pattern 0x${pattern.toString(16).padStart(3, '0')}`}
+      title={`'${letterName}' · index ${index} · ${isData ? `5-bit ${index.toString(2).padStart(5,'0')}` : 'border'} · pattern 0x${pattern.toString(16).padStart(3, '0')}`}
       style={{
         display: 'flex',
         flexDirection: 'column',

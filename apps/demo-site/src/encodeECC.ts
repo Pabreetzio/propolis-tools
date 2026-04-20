@@ -5,7 +5,7 @@
  */
 
 import type { PlacedLetter, HVec } from '@propolis-tools/renderer';
-import type { EncodeResult, LetterRole } from './encode.js';
+import type { EncodeResult, LetterRole, EncodePipeline } from './encode.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -434,6 +434,26 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
   const allLetters = [...letters, ...border.letters];
   const allRoles = [...roles, ...border.roles];
 
+  // Build pipeline metadata for the visual pipeline display
+  const pipeline: EncodePipeline = {
+    utf8Bytes: Array.from(bytes),
+    // letterChars values are 0x40–0x5F; String.fromCharCode gives Pierre's letter name directly
+    rawLetterNames: letterChars.map(c => String.fromCharCode(c)),
+    checkLetterNames: withChecks.slice(letterChars.length).map(c => String.fromCharCode(c)),
+    cornerLetters: [
+      { charVal: 0x40,                  role: 'Orientation marker — always @ (blank), decoder finds this corner to orient the code' },
+      { charVal: v4 + 0x41,             role: 'Block count — high bits (⌊(nBlocks−1)/31⌋ in GF(31))' },
+      { charVal: v3 + 0x41,             role: 'Block count — low bits ((nBlocks−1) mod 31 in GF(31))' },
+      { charVal: ENCODING_BYTE + 0x40,  role: 'Encoding mode (mode 8 = raw bytes — no compression)' },
+      { charVal: lc1 + 0x41,            role: 'Lagrange error-check 1 (polynomial at x=1 over GF(31))' },
+      { charVal: lc0 + 0x41,            role: 'Lagrange error-check 0 (polynomial at x=0 over GF(31))' },
+    ].map(({ charVal, role }) => ({
+      name: String.fromCharCode(charVal),
+      index: charVal & 0x1f,
+      role,
+    })),
+  };
+
   return {
     letters: allLetters,
     radius: size,
@@ -443,6 +463,7 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
     truncated: false,
     redundancy: nBlocks > 0 ? (nLetters - nDataCheck) / nLetters : 0,
     letterRoles: allRoles,
+    pipeline,
   };
 }
 
