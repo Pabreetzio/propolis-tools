@@ -63,8 +63,8 @@ export function EncodingPipeline({ result, colors }: Props) {
       </h2>
       <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
         How your message is transformed into a propolis symbol, step by step.
-        Pierre names each of the 32 data letters with the ASCII characters{' '}
-        <code>@</code> through <code>_</code> (indices 0–31, stored as char code + 0x40 internally).
+        Each of the 32 data letters is identified by a shorthand character —{' '}
+        <code>@</code> through <code>_</code> — a convenient label for the 32 possible 5-bit values (index + 0x40).
       </p>
 
       {/* ── Step 1: UTF-8 bytes ── */}

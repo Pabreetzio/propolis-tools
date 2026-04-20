@@ -172,7 +172,7 @@ export function App() {
           <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>click any letter to inspect</span>
         </div>
         <p style={{ color: 'var(--text-dim)', fontSize: '0.825rem', marginBottom: '1.25rem' }}>
-          32 data letters named <code>@</code> through <code>_</code> (Pierre's internal alphabet — index + 0x40) and 6 border letters.
+          32 data letters, each identified by a shorthand character from <code>@</code> to <code>_</code> (index + 0x40), and 6 border letters.
           Each is a 12-dot Eisenstein-grid cluster encoding one 5-bit value.
         </p>
 

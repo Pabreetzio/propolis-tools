@@ -55,6 +55,20 @@ propolis-tools/
 - npm packages: publish `@propolis-tools/core`, `@propolis-tools/renderer`, `@propolis-tools/cli`
 - Camera decoder (Phase 4): PWA + WebRTC approach, Android priority over iOS
 
+## Voice and Attribution Guidelines
+
+**Attribution on the site:**
+- Always credit Pierre Abbat by name as the inventor of propolis codes — e.g. "invented by Pierre Abbat" in headers and intro copy.
+- When discussing implementation decisions or format choices in conversation, it's fine to say "Pierre made it this way" or "he designed it to...".
+- User-facing site copy should not attribute specific internal conventions (like letter naming) to Pierre by name. Write as if from the propolis development team, or leave attribution off entirely. This avoids implying the detail is a personal quirk rather than a deliberate design choice.
+
+**"A shorthand" vs "the shorthand":**
+- When describing implementation conventions that may evolve (e.g. the `@`–`_` letter naming scheme), use "a shorthand" not "the shorthand". Using "the" implies this is the only possible convention; "a" correctly signals it's one convention in use now, and leaves room for alternatives. Document this reasoning here rather than on the page itself.
+
+**Watch for conversational language bleeding into copy:**
+- The user naturally says things like "Pierre's internal alphabet" in conversation. Do not lift that phrasing onto the page. Reframe as the feature or convention itself: "a shorthand character from @ to _" rather than "Pierre's internal alphabet".
+- Similarly avoid "his letters", "his naming scheme", etc. in user-facing text.
+
 ## Key References
 
 - Reference implementation: https://github.com/phma/propolis (C++, GPL-3.0)
