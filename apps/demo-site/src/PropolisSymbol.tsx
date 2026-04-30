@@ -10,8 +10,7 @@ interface Props {
   letterRoles?: LetterRole[];
 }
 
-const RENDER_OPTS = {
-  dotRadius: 0.44,
+const GRID_OPTS = {
   gridSpacing: 1,
   padding: 2.0,
 } as const;
@@ -96,21 +95,27 @@ export function PropolisSymbol({ letters, size = 340, colors, letterRoles }: Pro
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
+  const renderOpts = useMemo(() => ({
+    ...GRID_OPTS,
+    dotRadius: colors.symbolDotRadius,
+    dotShape: colors.symbolDotShape,
+  }), [colors.symbolDotRadius, colors.symbolDotShape]);
+
   const svg = useMemo(() =>
     renderToSVG(letters, {
-      ...RENDER_OPTS,
+      ...renderOpts,
       colorOn: colors.symbolOn,
       colorOff: colors.symbolOff,
       background: colors.symbolBg,
       showOff: true,
     }),
-  [letters, colors]);
+  [letters, colors, renderOpts]);
 
   // Precompute letter centers in SVG viewBox space (matches the rendered SVG exactly)
   const letterCenters = useMemo(() => {
     if (!letterRoles) return null;
-    return letterCentersInViewBox(letters, RENDER_OPTS);
-  }, [letters, letterRoles]);
+    return letterCentersInViewBox(letters, renderOpts);
+  }, [letters, letterRoles, renderOpts]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!letterCenters || !letterRoles) return;

@@ -13,7 +13,20 @@ const DEFAULTS: Required<RenderOptions> = {
   background: '#ffffff',
   padding: 2.5,
   showOff: true,
+  dotShape: 'circle',
 };
+
+/**
+ * Build an SVG polygon points string for a pointy-top regular hexagon.
+ * startAngle = π/6 puts the first vertex at upper-right, matching the
+ * Voronoi cell orientation of the Eisenstein triangular lattice.
+ */
+function hexPoints(cx: number, cy: number, r: number): string {
+  return Array.from({ length: 6 }, (_, i) => {
+    const a = Math.PI / 6 + (i * Math.PI) / 3;
+    return `${(cx + r * Math.cos(a)).toFixed(3)},${(cy + r * Math.sin(a)).toFixed(3)}`;
+  }).join(' ');
+}
 
 /**
  * Build a flat bit canvas from an array of placed letters.
@@ -74,13 +87,16 @@ export function renderBitCanvasToSVG(
   const ox = -bounds.minX + pad;
   const oy = -bounds.minY + pad;
 
-  const circles = canvas.cells
+  const cells = canvas.cells
     .filter(c => o.showOff || c.filled)
     .map(c => {
-      const cx = (c.cart.x + ox).toFixed(3);
-      const cy = (c.cart.y + oy).toFixed(3);
+      const cx = c.cart.x + ox;
+      const cy = c.cart.y + oy;
       const fill = c.filled ? o.colorOn : o.colorOff;
-      return `  <circle cx="${cx}" cy="${cy}" r="${o.dotRadius}" fill="${fill}"/>`;
+      if (o.dotShape === 'hexagon') {
+        return `  <polygon points="${hexPoints(cx, cy, o.dotRadius)}" fill="${fill}"/>`;
+      }
+      return `  <circle cx="${cx.toFixed(3)}" cy="${cy.toFixed(3)}" r="${o.dotRadius}" fill="${fill}"/>`;
     })
     .join('\n');
 
@@ -92,7 +108,7 @@ export function renderBitCanvasToSVG(
     `     preserveAspectRatio="xMidYMid meet"`,
     `     style="display:block;width:100%;height:100%">`,
     `  <rect width="100%" height="100%" fill="${o.background}"/>`,
-    circles,
+    cells,
     `</svg>`,
   ].join('\n');
 }

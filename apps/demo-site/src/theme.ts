@@ -18,6 +18,13 @@ export interface ThemeColors {
   glyphBtnHighBorder: string;
   glyphLabelColor: string;
   glyphLabelHighColor: string;
+  // Pipeline step selection highlight (distinct from ECC/corner amber)
+  pipelineSelBg: string;
+  pipelineSelBorder: string;
+  pipelineSelText: string;
+  // Symbol cell rendering style
+  symbolDotShape: 'circle' | 'hexagon';
+  symbolDotRadius: number;
 }
 
 /** Resolve 'system' to the actual applied theme based on OS preference. */
@@ -30,20 +37,29 @@ export const themeColors: Record<'dark' | 'light', ThemeColors> = {
   dark: {
     symbolOn: '#d0d0ff',
     symbolOff: '#1e1e38',
-    symbolBg: '#080812',
+    symbolBg: '#1e1e38',  // matches symbolOff so no visible border between cells
 
     glyphOn: '#c8c8ff',
     glyphOff: '#22223c',
-    glyphHighOn: '#ff6b9d',
-    glyphHighOff: '#38182e',
+    glyphHighOn: '#b0b0ff',
+    glyphHighOff: '#1e1e3a',
 
-    symbolContainerBg: '#080812',
+    symbolContainerBg: '#1e1e38',
     glyphBtnBg: '#0e0e20',
-    glyphBtnHighBg: '#1e101c',
+    glyphBtnHighBg: '#16163a',
     glyphBtnBorder: '#2a2a44',
-    glyphBtnHighBorder: '#ff6b9d55',
+    glyphBtnHighBorder: '#5a5ab8',
     glyphLabelColor: '#6060a0',
-    glyphLabelHighColor: '#ff6b9d',
+    glyphLabelHighColor: '#b0b0ff',
+
+    // Pipeline selection: indigo-purple, distinct from the pink ECC/corner palette
+    pipelineSelBg: '#16163a',
+    pipelineSelBorder: '#5a5ab8',
+    pipelineSelText: '#c8c8ff',
+
+    // Hexagonal cells at exact Voronoi tiling size (circumradius = 1/√3, no gaps)
+    symbolDotShape: 'hexagon',
+    symbolDotRadius: 1 / Math.sqrt(3),
   },
   light: {
     // Filled cells: near-black dark brown — the dark pattern, like Pierre's PS output
@@ -65,5 +81,14 @@ export const themeColors: Record<'dark' | 'light', ThemeColors> = {
     glyphBtnHighBorder: '#b45309',
     glyphLabelColor: '#b45309',
     glyphLabelHighColor: '#7c2d12',
+
+    // Pipeline selection: amber highlight (now distinct since ECC/corners are neutral)
+    pipelineSelBg: '#fde68a',
+    pipelineSelBorder: '#b45309',
+    pipelineSelText: '#7c2d12',
+
+    // Circular dots at normal size
+    symbolDotShape: 'circle',
+    symbolDotRadius: 0.44,
   },
 };

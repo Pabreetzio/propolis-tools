@@ -66,8 +66,10 @@ const DISPLAY_SIZE = 260;
 export function QRComparison({ text, result, colors, applied, qrLevel, onQrLevelChange }: Props) {
   const [qrSvg, setQrSvg] = useState('');
 
-  const qrDark  = applied === 'light' ? '#1c0800' : '#d0d0ff';
-  const qrLight = applied === 'light' ? '#fef9e8' : '#080812';
+  // QR always dark-on-light. In dark mode, borrow propolis colors (symbolOff as modules,
+  // symbolOn as background) so both symbols share the same palette.
+  const qrDark  = applied === 'light' ? '#1c0800' : colors.symbolOff;
+  const qrLight = applied === 'light' ? '#fef9e8' : colors.symbolOn;
 
   useEffect(() => {
     if (!text) { setQrSvg(''); return; }
@@ -82,7 +84,8 @@ export function QRComparison({ text, result, colors, applied, qrLevel, onQrLevel
   // Render propolis SVG at comparison quality
   const propolisSvg = useMemo(() =>
     renderToSVG(result.letters, {
-      dotRadius: 0.44,
+      dotRadius: colors.symbolDotRadius,
+      dotShape: colors.symbolDotShape,
       gridSpacing: 1,
       colorOn: colors.symbolOn,
       colorOff: colors.symbolOff,

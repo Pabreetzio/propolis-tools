@@ -138,9 +138,6 @@ export function App() {
         propolisRedundancy={propolisRedundancy} onRedundancyChange={setPropolisRedundancy}
       />
 
-      {/* ── Encoding Pipeline ── */}
-      <EncodingPipeline result={result} colors={colors} />
-
       {/* ── QR Comparison ── */}
       <QRComparison
         text={text} result={result} colors={colors} applied={applied}
@@ -250,6 +247,9 @@ export function App() {
           ))}
         </div>
       </section>
+
+      {/* ── Encoding Pipeline ── */}
+      <EncodingPipeline result={result} colors={colors} text={text} />
 
       {/* ── Footer ── */}
       <footer style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem', color: 'var(--text-dim)', fontSize: '0.8rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', opacity: 0.7 }}>

@@ -47,4 +47,6 @@ export interface RenderOptions {
   padding?: number;
   /** Whether to show empty (off) dots. Default: true */
   showOff?: boolean;
+  /** Shape of each cell. Default: 'circle' */
+  dotShape?: 'circle' | 'hexagon';
 }
