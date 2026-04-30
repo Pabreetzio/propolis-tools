@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import QRCode from 'qrcode';
 import { renderToSVG } from '@propolis-tools/renderer';
+import type { EncodeResult } from '@propolis-tools/core';
 import type { ThemeColors } from './theme.js';
-import type { EncodeResult } from './encode.js';
 
 // QR byte-mode capacity at M error-correction level, versions 1-40
 const QR_BYTES_M = [

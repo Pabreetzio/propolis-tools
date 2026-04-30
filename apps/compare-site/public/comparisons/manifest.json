@@ -1,0 +1,11 @@
+{
+  "pairs": [
+    {
+      "id": "hello-size2",
+      "label": "hello-size2",
+      "cpp": "/comparisons/cpp/hello-size2.png",
+      "web": "/comparisons/web/hello-size2.png",
+      "hmapComparison": "/comparisons/hmap/comparison/hello-size2.json"
+    }
+  ]
+}

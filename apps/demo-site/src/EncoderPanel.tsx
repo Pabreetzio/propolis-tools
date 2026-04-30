@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { PropolisSymbol } from './PropolisSymbol.js';
 import type { ThemeColors } from './theme.js';
-import type { EncodeResult } from './encode.js';
+import type { EncodeResult } from '@propolis-tools/core';
 
 const EXAMPLES = [
   'propolis',

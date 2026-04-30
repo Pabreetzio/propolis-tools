@@ -33,9 +33,15 @@ export interface EncodeResult {
   truncated: boolean;
 }
 
-export function encodeText(text: string): EncodeResult {
+export interface EncodeOptions {
+  /** Minimum data radius to render. The encoder may grow if the input does not fit. */
+  radius?: number;
+}
+
+export function encodeText(text: string, options: EncodeOptions = {}): EncodeResult {
   const encoder = new TextEncoder();
-  const MAX_RADIUS = 8; // prevents runaway large inputs
+  const requestedRadius = Math.max(1, Math.floor(options.radius ?? 1));
+  const MAX_RADIUS = Math.max(8, requestedRadius); // prevents runaway large inputs
 
   // Pack bytes into 5-bit letter indices
   function pack(bytes: Uint8Array): number[] {
@@ -61,7 +67,7 @@ export function encodeText(text: string): EncodeResult {
 
   // Find radius that fits, capping at MAX_RADIUS
   let letterIndices = pack(bytes);
-  let radius = 1;
+  let radius = requestedRadius;
   while (radius < MAX_RADIUS && hexLetterCenters(radius).length < letterIndices.length) {
     radius++;
   }
@@ -83,7 +89,6 @@ export function encodeText(text: string): EncodeResult {
   }
 
   const rawCenters = hexLetterCenters(radius);
-  const borderCenters = hexLetterCenters(radius + 1);
   const dataSet = new Set(rawCenters.map(c => `${c.x},${c.y}`));
 
   // Assign letter indices in sorted order
@@ -93,16 +98,28 @@ export function encodeText(text: string): EncodeResult {
     assignment.set(`${c.x},${c.y}`, letterIndices[i] ?? 0);
   });
 
-  const letters: PlacedLetter[] = borderCenters.map(center => {
+  const letters: PlacedLetter[] = [];
+  for (const center of rawCenters) {
     const key = `${center.x},${center.y}`;
-    if (dataSet.has(key)) {
-      return { center, letterIndex: assignment.get(key) ?? 0 };
-    }
-    // Alternate border letters based on position for visual variety
-    const cx = toCartesian(center);
-    const borderIdx = Math.abs(Math.round(cx.x * 3 + cx.y * 7)) % 6;
-    return { center, letterIndex: 32 + borderIdx };
-  });
+    if (dataSet.has(key)) letters.push({ center, letterIndex: assignment.get(key) ?? 0 });
+  }
+
+  // Mirror C++ border(n): the border is one letter ring outside the data.
+  const border = radius + 1;
+  for (let i = 1; i < border; i++) {
+    letters.push({ center: { x: border, y: i }, letterIndex: 0x20 });
+    letters.push({ center: { x: i, y: border }, letterIndex: 0x21 });
+    letters.push({ center: { x: -i, y: border - i }, letterIndex: 0x22 });
+    letters.push({ center: { x: -border, y: -i }, letterIndex: 0x23 });
+    letters.push({ center: { x: -i, y: -border }, letterIndex: 0x24 });
+    letters.push({ center: { x: i, y: i - border }, letterIndex: 0x25 });
+  }
+  letters.push({ center: { x: border, y: 0 }, letterIndex: 0x02 });
+  letters.push({ center: { x: border, y: border }, letterIndex: 0x1a });
+  letters.push({ center: { x: 0, y: border }, letterIndex: 0x18 });
+  letters.push({ center: { x: -border, y: 0 }, letterIndex: 0x1d });
+  letters.push({ center: { x: -border, y: -border }, letterIndex: 0x05 });
+  letters.push({ center: { x: 0, y: -border }, letterIndex: 0x07 });
 
   return {
     letters,
