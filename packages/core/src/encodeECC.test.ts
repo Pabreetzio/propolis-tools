@@ -196,6 +196,22 @@ describe('encodeTextECC', () => {
     expect(actual).toEqual(expected);
   });
 
+  it('can force ASCII encoding for "hello"', () => {
+    const result = encodeTextECC('hello', 0, { encoding: 7 });
+    expect(result.encodingMode).toBe(7);
+    expect(result.encodingLabel).toBe('ASCII');
+  });
+
+  it('can force UTF-8 byte encoding when requested', () => {
+    const result = encodeTextECC('hello', 0, { encoding: 8 });
+    expect(result.encodingMode).toBe(8);
+    expect(result.pipeline?.encodingLabel).toBe('UTF-8 bytes');
+  });
+
+  it('rejects an incompatible forced encoding', () => {
+    expect(() => encodeTextECC('hello', 0, { encoding: 10 })).toThrow();
+  });
+
   it('produces different output for different inputs', () => {
     const r1 = encodeTextECC('hello world');
     const r2 = encodeTextECC('propolis');

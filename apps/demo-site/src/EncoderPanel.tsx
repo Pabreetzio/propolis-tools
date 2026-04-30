@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { PropolisSymbol } from './PropolisSymbol.js';
 import type { ThemeColors } from './theme.js';
-import type { EncodeResult } from '@propolis-tools/core';
+import type { EncodeResult, PropolisEncodingMode } from '@propolis-tools/core';
 
 const EXAMPLES = [
   'propolis',
@@ -17,6 +17,28 @@ const REDUNDANCY_PRESETS: { label: string; value: number; description: string }[
   { label: 'High',   value: 0.65, description: '~65% redundancy (near maximum)' },
 ];
 
+const ENCODING_PRESETS: {
+  label: string;
+  value: PropolisEncodingMode;
+  description: string;
+}[] = [
+  {
+    label: 'ASCII',
+    value: 7,
+    description: 'Use 7-bit text for ordinary English letters, punctuation, and control characters.',
+  },
+  {
+    label: 'UTF-8 bytes',
+    value: 8,
+    description: 'Use raw UTF-8 bytes, which can represent any Unicode text.',
+  },
+  {
+    label: 'Decimal/symbols',
+    value: 10,
+    description: 'Use the numeric and small-symbol format from the reference encoder.',
+  },
+];
+
 interface Props {
   colors: ThemeColors;
   text: string;
@@ -24,9 +46,22 @@ interface Props {
   result: EncodeResult;
   propolisRedundancy: number;
   onRedundancyChange: (r: number) => void;
+  propolisEncoding: PropolisEncodingMode;
+  onEncodingChange: (encoding: PropolisEncodingMode) => void;
+  availableEncodings: PropolisEncodingMode[];
 }
 
-export function EncoderPanel({ colors, text, setText, result, propolisRedundancy, onRedundancyChange }: Props) {
+export function EncoderPanel({
+  colors,
+  text,
+  setText,
+  result,
+  propolisRedundancy,
+  onRedundancyChange,
+  propolisEncoding,
+  onEncodingChange,
+  availableEncodings,
+}: Props) {
   const [copied, setCopied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -139,6 +174,41 @@ export function EncoderPanel({ colors, text, setText, result, propolisRedundancy
             ))}
           </div>
 
+          {/* Encoding selector */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.4rem' }}>
+              Message format
+            </div>
+            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+              {ENCODING_PRESETS.map(preset => {
+                const active = propolisEncoding === preset.value;
+                const disabled = !availableEncodings.includes(preset.value);
+                return (
+                  <button
+                    key={preset.label}
+                    onClick={() => { if (!disabled) onEncodingChange(preset.value); }}
+                    disabled={disabled}
+                    title={disabled ? 'This message cannot be represented in that format.' : preset.description}
+                    style={{
+                      padding: '0.25rem 0.65rem',
+                      borderRadius: 6,
+                      border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                      background: active ? 'var(--surface)' : 'transparent',
+                      color: disabled ? 'var(--text-dim)' : active ? 'var(--accent)' : 'var(--text-dim)',
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                      opacity: disabled ? 0.42 : 1,
+                      fontSize: '0.775rem',
+                      fontWeight: active ? 600 : 400,
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ECC preset selector */}
           <div style={{ marginBottom: '1rem' }}>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.4rem' }}>
@@ -182,6 +252,7 @@ export function EncoderPanel({ colors, text, setText, result, propolisRedundancy
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1.5rem', marginBottom: '0.75rem' }}>
               {([
                 ['Input', `${result.bytesEncoded} byte${result.bytesEncoded !== 1 ? 's' : ''}`],
+                ['Format', result.encodingLabel ?? 'Simplified'],
                 ['Symbol size', `radius ${result.radius}`],
                 ['Data slots', `${result.dataSlots} letters`],
                 ['Capacity', `${result.byteCapacity} bytes`],
@@ -273,7 +344,7 @@ export function EncoderPanel({ colors, text, setText, result, propolisRedundancy
           </div>
 
           <p style={{ marginTop: '0.75rem', color: 'var(--text-dim)', fontSize: '0.75rem', lineHeight: 1.6, opacity: 0.7 }}>
-            Encoding mode 8 (raw bytes) · Hamming ECC · criss-cross interleaving · whitening —
+            {result.encodingLabel ?? 'Simplified'} · Hamming ECC · criss-cross interleaving · whitening —
             compatible with the reference C++ decoder.
           </p>
         </div>

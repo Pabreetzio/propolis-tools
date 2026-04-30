@@ -30,7 +30,7 @@ function sortedCenters(centers: HVec[]): HVec[] {
 export type LetterRoleKind =
   | 'data'                    // carries 5 bits of scrambled, error-coded payload
   | 'metadata-index'          // @ orientation marker — always letter 0 (all-white)
-  | 'metadata-encoding'       // encoding mode (mode 8 = raw bytes)
+  | 'metadata-encoding'       // selected reference encoding mode
   | 'metadata-nblocks-lo'     // (nBlocks − 1) mod 31 in GF(31)
   | 'metadata-nblocks-hi'     // floor((nBlocks − 1) / 31) in GF(31)
   | 'metadata-lagrange0'      // Lagrange error-check at x=0 over GF(31)
@@ -50,6 +50,20 @@ export interface LetterRole {
 export interface EncodePipeline {
   /** Raw UTF-8 bytes of the message */
   utf8Bytes: number[];
+  /** Propolis reference encoding mode used for this symbol. */
+  encodingMode?: PropolisEncodingMode;
+  /** Human-readable name for the selected encoding mode. */
+  encodingLabel?: string;
+  /** Human-readable source units used by the selected encoder before 5-bit letters. */
+  sourceUnits?: Array<{
+    label: string;
+    value: string;
+    detail: string;
+  }>;
+  /** Short label for the source-unit section. */
+  sourceUnitLabel?: string;
+  /** Short description of how the selected mode becomes Propolis letters. */
+  packingDescription?: string;
   /** One entry per 5-bit group from the message bytes, as Pierre's letter names (@…_) */
   rawLetterNames: string[];
   /** Check letters appended for error detection (same naming, shown separately) */
@@ -65,6 +79,10 @@ export interface EncodePipeline {
 export interface EncodeResult {
   letters: PlacedLetter[];
   radius: number;
+  /** Propolis reference encoding mode used for this symbol. */
+  encodingMode?: PropolisEncodingMode;
+  /** Human-readable name for the selected encoding mode. */
+  encodingLabel?: string;
   /** Number of data letter slots in the hex region */
   dataSlots: number;
   /** Bytes of data encoded */
@@ -85,6 +103,9 @@ export interface EncodeOptions {
   /** Minimum data radius to render. The encoder may grow if the input does not fit. */
   radius?: number;
 }
+
+export type PropolisEncodingMode = 5 | 7 | 8 | 10;
+export type PropolisEncodingPreference = 'auto' | PropolisEncodingMode;
 
 export function encodeText(text: string, options: EncodeOptions = {}): EncodeResult {
   const encoder = new TextEncoder();

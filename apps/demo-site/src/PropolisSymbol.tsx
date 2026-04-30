@@ -37,8 +37,8 @@ function describeRole(role: LetterRole, letterIndex: number): { title: string; d
       return {
         title: 'Encoding mode (metadata corner)',
         detail:
-          'Stores the encoding type. Mode 8 means raw bytes — the message bits are ' +
-          'packed directly from UTF-8 bytes into 5-bit groups, with no compression.',
+          'Stores the message format selected by the encoder, such as ASCII, UTF-8 bytes, ' +
+          'or decimal/symbols.',
       };
     case 'metadata-nblocks-lo':
       return {

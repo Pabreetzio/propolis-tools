@@ -3,7 +3,7 @@ import { LetterGlyph } from './LetterGlyph.js';
 import { EncoderPanel } from './EncoderPanel.js';
 import { QRComparison } from './QRComparison.js';
 import { LETTER_PATTERNS } from '@propolis-tools/renderer';
-import { encodeText, encodeTextECC } from '@propolis-tools/core';
+import { encodeText, encodeTextECC, type PropolisEncodingMode } from '@propolis-tools/core';
 import { themeColors, resolveTheme, type Theme } from './theme.js';
 import { EncodingPipeline } from './EncodingPipeline.js';
 
@@ -26,6 +26,26 @@ function getInitialText(): string {
   return 'propolis';
 }
 
+const WEB_ENCODING_MODES: PropolisEncodingMode[] = [7, 8, 10];
+
+function getInitialEncoding(): PropolisEncodingMode {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const enc = params.get('enc');
+    if (enc === '7' || enc === '8' || enc === '10') return Number(enc) as PropolisEncodingMode;
+  } catch { /* ignore */ }
+  return 7;
+}
+
+function canUseEncoding(text: string, redundancy: number, encoding: PropolisEncodingMode): boolean {
+  try {
+    encodeTextECC(text, redundancy, { encoding });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function App() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [systemPrefers, setSystemPrefers] = useState<'dark' | 'light'>(() =>
@@ -34,6 +54,7 @@ export function App() {
   const [text, setText] = useState<string>(getInitialText);
   const [selectedLetter, setSelectedLetter] = useState<number | null>(null);
   const [propolisRedundancy, setPropolisRedundancy] = useState(0);
+  const [propolisEncoding, setPropolisEncoding] = useState<PropolisEncodingMode>(getInitialEncoding);
   const [qrLevel, setQrLevel] = useState<'L' | 'M' | 'Q' | 'H'>('M');
 
   const applied = theme === 'system' ? systemPrefers : theme;
@@ -61,13 +82,26 @@ export function App() {
     } else {
       url.searchParams.set('msg', text);
     }
+    url.searchParams.set('enc', String(propolisEncoding));
     window.history.replaceState(null, '', url.toString());
-  }, [text]);
+  }, [text, propolisEncoding]);
+
+  const availableEncodings = useMemo(() => {
+    return WEB_ENCODING_MODES.filter((encoding) => canUseEncoding(text, propolisRedundancy, encoding));
+  }, [text, propolisRedundancy]);
+
+  useEffect(() => {
+    if (availableEncodings.includes(propolisEncoding)) return;
+    setPropolisEncoding(availableEncodings[0] ?? 8);
+  }, [availableEncodings, propolisEncoding]);
 
   const result = useMemo(() => {
-    try { return encodeTextECC(text, propolisRedundancy); }
-    catch { return encodeText(text); }   // fallback to simplified if ECC fails
-  }, [text, propolisRedundancy]);
+    try { return encodeTextECC(text, propolisRedundancy, { encoding: propolisEncoding }); }
+    catch {
+      try { return encodeTextECC(text, propolisRedundancy, { encoding: availableEncodings[0] ?? 8 }); }
+      catch { return encodeText(text); }
+    }
+  }, [text, propolisRedundancy, propolisEncoding, availableEncodings]);
 
   const dataLetters = LETTER_PATTERNS.slice(0, 32);
   const borderLetters = LETTER_PATTERNS.slice(32);
@@ -135,6 +169,8 @@ export function App() {
       <EncoderPanel
         colors={colors} text={text} setText={setText} result={result}
         propolisRedundancy={propolisRedundancy} onRedundancyChange={setPropolisRedundancy}
+        propolisEncoding={propolisEncoding} onEncodingChange={setPropolisEncoding}
+        availableEncodings={availableEncodings}
       />
 
       {/* ── QR Comparison ── */}
@@ -248,7 +284,7 @@ export function App() {
       </section>
 
       {/* ── Encoding Pipeline ── */}
-      <EncodingPipeline result={result} colors={colors} text={text} />
+      <EncodingPipeline result={result} colors={colors} />
 
       {/* ── Footer ── */}
       <footer style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem', color: 'var(--text-dim)', fontSize: '0.8rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', opacity: 0.7 }}>

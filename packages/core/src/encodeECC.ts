@@ -1,11 +1,17 @@
 /**
  * Full propolis encoder — Hamming ECC + criss-cross + whitening.
  * Faithfully ported from Pierre Abbat's reference C++ implementation.
- * Encoding mode 8 (raw bytes), compatible with the reference decoder.
+ * Supports the reference encoder's compact text modes used by the web demo.
  */
 
 import type { PlacedLetter, HVec } from '@propolis-tools/renderer';
-import type { EncodeResult, LetterRole, EncodePipeline } from './encode.js';
+import type {
+  EncodeResult,
+  LetterRole,
+  EncodePipeline,
+  PropolisEncodingMode,
+  PropolisEncodingPreference,
+} from './encode.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -32,9 +38,20 @@ const BITPERMTAB0 = [
 ];
 
 interface EncodedCandidate {
-  encoding: number;
+  encoding: PropolisEncodingMode;
   codestring: number[];
 }
+
+export interface EncodeTextECCOptions {
+  encoding?: PropolisEncodingPreference;
+}
+
+export const PROPOLIS_ENCODING_LABELS: Record<PropolisEncodingMode, string> = {
+  5: 'Propolis alphabet',
+  7: 'ASCII',
+  8: 'UTF-8 bytes',
+  10: 'Decimal and symbols',
+};
 
 // ── Bit permutation table (lazy) ─────────────────────────────────────────────
 
@@ -153,6 +170,93 @@ function encodedList(text: string): EncodedCandidate[] {
     }
   }
   return list;
+}
+
+function selectCandidate(text: string, preference: PropolisEncodingPreference = 'auto'): EncodedCandidate | null {
+  if (preference === 'auto') return encodedList(text)[0] ?? null;
+  const candidateByMode: Record<PropolisEncodingMode, EncodedCandidate | null> = {
+    5: encode32(text),
+    7: encodeAscii(text),
+    8: encodeByte(text),
+    10: encodeDecimal(text),
+  };
+  return candidateByMode[preference];
+}
+
+function describeSourceUnits(text: string, encoding: PropolisEncodingMode): Pick<
+  EncodePipeline,
+  'sourceUnits' | 'sourceUnitLabel' | 'packingDescription'
+> {
+  if (encoding === 7) {
+    return {
+      sourceUnitLabel: 'ASCII characters',
+      packingDescription: 'pack each 7-bit ASCII character into the 5-bit Propolis letter stream',
+      sourceUnits: [...text].map((ch, i) => {
+        const code = ch.charCodeAt(0);
+        const shown = code >= 0x20 && code < 0x7f ? ch : 'ctrl';
+        return {
+          label: shown,
+          value: code.toString(2).padStart(7, '0'),
+          detail: `char ${i}: ASCII ${code} / 0x${code.toString(16).padStart(2, '0').toUpperCase()}`,
+        };
+      }),
+    };
+  }
+
+  if (encoding === 8) {
+    const bytes = new TextEncoder().encode(text);
+    return {
+      sourceUnitLabel: 'UTF-8 bytes',
+      packingDescription: 'pack each 8-bit UTF-8 byte into the 5-bit Propolis letter stream',
+      sourceUnits: Array.from(bytes).map((byte, i) => {
+        const shown = byte >= 0x20 && byte < 0x7f ? String.fromCharCode(byte) : 'byte';
+        return {
+          label: shown,
+          value: byte.toString(16).padStart(2, '0').toUpperCase(),
+          detail: `byte ${i}: ${byte} / 0x${byte.toString(16).padStart(2, '0').toUpperCase()}`,
+        };
+      }),
+    };
+  }
+
+  if (encoding === 10) {
+    const sourceUnits: Array<{ label: string; value: string; detail: string }> = [];
+    for (let i = 0; i < text.length;) {
+      const dig3 = text.slice(i, i + 3);
+      if (dig3.length === 3 && [...dig3].every((ch) => DIGITS.includes(ch))) {
+        sourceUnits.push({
+          label: dig3,
+          value: Number(dig3).toString(),
+          detail: `digits ${i}-${i + 2}: packed as one 000-999 value`,
+        });
+        i += 3;
+      } else {
+        const symbol = text[i];
+        const symbolIndex = CHR24.indexOf(symbol);
+        sourceUnits.push({
+          label: symbol,
+          value: String(1000 + symbolIndex),
+          detail: `symbol ${i}: index ${symbolIndex} in the decimal/symbol alphabet`,
+        });
+        i++;
+      }
+    }
+    return {
+      sourceUnitLabel: 'Decimal groups and symbols',
+      packingDescription: 'pack each three-digit group or allowed symbol into two Propolis letters',
+      sourceUnits,
+    };
+  }
+
+  return {
+    sourceUnitLabel: 'Propolis alphabet characters',
+    packingDescription: 'map each native Propolis alphabet character directly to one letter',
+    sourceUnits: [...text].map((ch, i) => ({
+      label: ch,
+      value: String(ch.charCodeAt(0)),
+      detail: `char ${i}: native Propolis alphabet input`,
+    })),
+  };
 }
 
 /**
@@ -423,12 +527,16 @@ function* hvecIterate(size: number): Generator<[number, number]> {
 
 // ── Main encoder ──────────────────────────────────────────────────────────────
 
-export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
+export function encodeTextECC(
+  text: string,
+  redundancy = 0,
+  options: EncodeTextECCOptions = {},
+): EncodeResult {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(text);
 
   // Step 1 — choose the shortest compatible C++ encoding candidate.
-  const candidate = encodedList(text)[0];
+  const candidate = selectCandidate(text, options.encoding ?? 'auto');
   if (!candidate) throw new Error('No compatible propolis encoding found.');
   const letterChars = candidate.codestring;
 
@@ -525,6 +633,9 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
   // Build pipeline metadata for the visual pipeline display
   const pipeline: EncodePipeline = {
     utf8Bytes: Array.from(bytes),
+    encodingMode: candidate.encoding,
+    encodingLabel: PROPOLIS_ENCODING_LABELS[candidate.encoding],
+    ...describeSourceUnits(text, candidate.encoding),
     // letterChars values are 0x40–0x5F; String.fromCharCode gives Pierre's letter name directly
     rawLetterNames: letterChars.map(c => String.fromCharCode(c)),
     checkLetterNames: withChecks.slice(letterChars.length).map(c => String.fromCharCode(c)),
@@ -545,6 +656,8 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
   return {
     letters: allLetters,
     radius: size,
+    encodingMode: candidate.encoding,
+    encodingLabel: PROPOLIS_ENCODING_LABELS[candidate.encoding],
     dataSlots: nLetters,
     bytesEncoded: bytes.length,
     byteCapacity: Math.floor(nDataCheck * 5 / 8),

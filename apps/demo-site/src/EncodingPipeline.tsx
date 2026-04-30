@@ -5,10 +5,7 @@ import type { ThemeColors } from './theme.js';
 interface Props {
   result: EncodeResult;
   colors: ThemeColors;
-  text: string;
 }
-
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionHeading({ n, title }: { n: number; title: string }) {
   return (
@@ -38,91 +35,71 @@ function Arrow({ label }: { label: string }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+  return aStart <= bEnd && bStart <= aEnd;
+}
 
-export function EncodingPipeline({ result, colors, text }: Props) {
+function unitBitWidth(mode: number | undefined): number {
+  if (mode === 7) return 7;
+  if (mode === 8) return 8;
+  if (mode === 10) return 10;
+  return 5;
+}
+
+export function EncodingPipeline({ result, colors }: Props) {
   const { pipeline } = result;
   if (!pipeline) return null;
 
-  const { rawLetterNames, checkLetterNames, cornerLetters } = pipeline;
+  const {
+    rawLetterNames,
+    checkLetterNames,
+    cornerLetters,
+    encodingLabel,
+    encodingMode,
+    sourceUnits = [],
+    sourceUnitLabel = 'Input units',
+    packingDescription = 'pack input into the 5-bit Propolis letter stream',
+  } = pipeline;
 
-  // Split text into Unicode code points, then get the bytes for each
-  const charGroups = useMemo(() => {
-    const encoder = new TextEncoder();
-    return [...text].map(ch => ({
-      char: ch,
-      bytes: Array.from(encoder.encode(ch)),
+  const [selected, setSelected] = useState<{ step: 1 | 2; index: number } | null>(null);
+  const width = unitBitWidth(encodingMode);
+
+  const unitRanges = useMemo(() => {
+    return sourceUnits.map((_, i) => ({
+      start: i * width,
+      end: i * width + width - 1,
     }));
-  }, [text]);
+  }, [sourceUnits, width]);
 
-  const [selected, setSelected] = useState<{ step: 1 | 2 | 3; index: number } | null>(null);
-
-  const totalBytes = charGroups.reduce((s, g) => s + g.bytes.length, 0);
-  const packedLetterCount = Math.ceil(totalBytes * 8 / 5);
-
-  // Build per-character byte ranges and byte→char mapping
-  const { charByteRanges, byteToChar } = useMemo(() => {
-    const charByteRanges: Array<{ start: number; end: number }> = [];
-    const byteToChar: number[] = [];
-    let offset = 0;
-    for (let ci = 0; ci < charGroups.length; ci++) {
-      const len = charGroups[ci].bytes.length;
-      charByteRanges.push({ start: offset, end: offset + len - 1 });
-      for (let bi = 0; bi < len; bi++) byteToChar.push(ci);
-      offset += len;
-    }
-    return { charByteRanges, byteToChar };
-  }, [charGroups]);
-
-  // Compute which indices to highlight in each step based on bit-level overlap.
-  // Letter l covers bits [l*5, l*5+4]. Byte b covers bits [b*8, b*8+7].
-  // Overlap when: l*5 <= b*8+7  AND  b*8 <= l*5+4.
   const highlights = useMemo(() => {
     const s1 = new Set<number>();
     const s2 = new Set<number>();
-    const s3 = new Set<number>();
-    if (!selected) return { s1, s2, s3 };
+    if (!selected) return { s1, s2 };
 
     if (selected.step === 1) {
-      // Char selected → its bytes → letters overlapping those bytes
       s1.add(selected.index);
-      const { start, end } = charByteRanges[selected.index];
-      for (let b = start; b <= end; b++) s2.add(b);
-    } else if (selected.step === 2) {
-      // Byte selected → its char → letters overlapping this byte
-      const b = selected.index;
-      s2.add(b);
-      s1.add(byteToChar[b]);
+      const unit = unitRanges[selected.index];
+      if (unit) {
+        rawLetterNames.forEach((_, i) => {
+          if (rangesOverlap(unit.start, unit.end, i * 5, i * 5 + 4)) s2.add(i);
+        });
+      }
     } else {
-      // Letter selected → bytes overlapping its 5-bit range → chars of those bytes
-      s3.add(selected.index);
-      const l = selected.index;
-      const bMin = Math.max(0, Math.ceil((l * 5 - 7) / 8));
-      const bMax = Math.min(totalBytes - 1, Math.floor((l * 5 + 4) / 8));
-      for (let b = bMin; b <= bMax; b++) {
-        s2.add(b);
-        s1.add(byteToChar[b]);
-      }
+      s2.add(selected.index);
+      const letterStart = selected.index * 5;
+      const letterEnd = letterStart + 4;
+      unitRanges.forEach((unit, i) => {
+        if (rangesOverlap(unit.start, unit.end, letterStart, letterEnd)) s1.add(i);
+      });
     }
 
-    // From the s2 bytes, find all overlapping data letters (unless step 3 was clicked)
-    if (selected.step !== 3) {
-      for (const b of s2) {
-        const lMin = Math.max(0, Math.ceil((b * 8 - 4) / 5));
-        const lMax = Math.min(rawLetterNames.length - 1, Math.floor((b * 8 + 7) / 5));
-        for (let l = lMin; l <= lMax; l++) s3.add(l);
-      }
-    }
-
-    return { s1, s2, s3 };
-  }, [selected, charByteRanges, byteToChar, totalBytes, rawLetterNames]);
+    return { s1, s2 };
+  }, [selected, unitRanges, rawLetterNames]);
 
   const hasHighlight = selected !== null;
-
-  const toggle = (step: 1 | 2 | 3, index: number) =>
+  const toggle = (step: 1 | 2, index: number) =>
     setSelected(sel => sel?.step === step && sel.index === index ? null : { step, index });
 
-  // Shared chip style (for Step 3 letter chips)
   const chipBase: React.CSSProperties = {
     display: 'inline-flex',
     flexDirection: 'column',
@@ -133,7 +110,6 @@ export function EncodingPipeline({ result, colors, text }: Props) {
     lineHeight: 1.25,
   };
 
-  // Box highlight style for Step 1 & 2 cards
   const cardStyle = (hl: boolean): React.CSSProperties => ({
     border: `1px solid ${hl ? colors.pipelineSelBorder : colors.glyphBtnBorder}`,
     borderRadius: 8,
@@ -152,9 +128,8 @@ export function EncodingPipeline({ result, colors, text }: Props) {
       </h2>
       <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem', lineHeight: 1.6 }}>
         How your message is transformed into a propolis symbol, step by step.
-        Each of the 32 data letters is identified by a shorthand character —{' '}
-        <code>@</code> through <code>_</code> — a convenient label for the 32 possible 5-bit values (index&nbsp;+&nbsp;0x40).
-        Click any box in steps 1–3 to highlight which boxes in the other steps it overlaps.
+        Each of the 32 data letters is identified by a shorthand character from <code>@</code> through <code>_</code>.
+        Click a box in steps 1 or 2 to highlight the overlapping data flow.
         {hasHighlight && (
           <> ·{' '}
             <button
@@ -169,102 +144,50 @@ export function EncodingPipeline({ result, colors, text }: Props) {
         )}
       </p>
 
-      {/* ── Step 1: Characters → bytes ── */}
-      <SectionHeading n={1} title="Characters → bytes" />
+      <SectionHeading n={1} title={`${sourceUnitLabel} (${encodingLabel ?? 'selected format'})`} />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.25rem' }}>
-        {charGroups.map(({ char, bytes }, ci) => {
-          const hl = hasHighlight && highlights.s1.has(ci);
+        {sourceUnits.map((unit, i) => {
+          const hl = hasHighlight && highlights.s1.has(i);
           return (
             <button
-              key={ci}
-              onClick={() => toggle(1, ci)}
+              key={i}
+              onClick={() => toggle(1, i)}
+              title={unit.detail}
               style={{
                 ...cardStyle(hl),
                 padding: '0.45rem 0.5rem',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '0.4rem',
+                gap: '0.35rem',
               }}
             >
-              <div style={{ fontSize: '1.15rem', lineHeight: 1, minWidth: '1ch', minHeight: '1.15rem', textAlign: 'center' }}>
-                {char}
-              </div>
-              <div style={{ display: 'flex', gap: '0.45rem' }}>
-                {bytes.map((b, bi) => (
-                  <span key={bi} style={{
-                    fontFamily: 'monospace', fontWeight: 700,
-                    fontSize: '0.8rem', color: 'var(--text)',
-                  }}>
-                    {b.toString(16).padStart(2, '0').toUpperCase()}
-                  </span>
-                ))}
-              </div>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.82rem', color: 'var(--text)' }}>
+                {unit.value}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', minHeight: '1em' }}>
+                {unit.label}
+              </span>
             </button>
           );
         })}
       </div>
       <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginBottom: '0.15rem', paddingLeft: 2 }}>
-        {charGroups.length} character{charGroups.length !== 1 ? 's' : ''} →{' '}
-        {totalBytes} byte{totalBytes !== 1 ? 's' : ''}
+        {sourceUnits.length} unit{sourceUnits.length !== 1 ? 's' : ''} in {encodingLabel ?? 'the selected format'}
       </div>
 
-      <Arrow label="expand each byte to 8 bits" />
+      <Arrow label={`${packingDescription} -> ${rawLetterNames.length} data letter${rawLetterNames.length !== 1 ? 's' : ''}`} />
 
-      {/* ── Step 2: Bytes → binary ── */}
-      <SectionHeading n={2} title={`${totalBytes} bytes → ${totalBytes * 8} bits`} />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.25rem' }}>
-        {charGroups.flatMap(({ bytes }, ci) =>
-          bytes.map((b, bi) => {
-            const globalByteIdx = charByteRanges[ci].start + bi;
-            const hl = hasHighlight && highlights.s2.has(globalByteIdx);
-            return (
-              <button
-                key={`${ci}-${bi}`}
-                onClick={() => toggle(2, globalByteIdx)}
-                style={{
-                  ...cardStyle(hl),
-                  padding: '0.35rem 0.45rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.2rem',
-                }}
-              >
-                <span style={{
-                  fontFamily: 'monospace', fontWeight: 700,
-                  fontSize: '0.8rem', color: 'var(--text)',
-                }}>
-                  {b.toString(16).padStart(2, '0').toUpperCase()}
-                </span>
-                <span style={{
-                  fontFamily: 'monospace', fontSize: '0.54rem',
-                  color: 'var(--text-dim)', letterSpacing: '0.01em',
-                }}>
-                  {b.toString(2).padStart(8, '0')}
-                </span>
-              </button>
-            );
-          })
-        )}
-      </div>
-      <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginBottom: '0.15rem', paddingLeft: 2 }}>
-        {totalBytes * 8} bits total
-      </div>
-
-      <Arrow label={`read left-to-right in groups of 5 → ${packedLetterCount} letter${packedLetterCount !== 1 ? 's' : ''}`} />
-
-      {/* ── Step 3: Data letters + check letters ── */}
-      <SectionHeading n={3} title={`Data letters + check letters (${rawLetterNames.length} + ${checkLetterNames.length})`} />
+      <SectionHeading n={2} title={`${encodingLabel ?? 'Data'} letters + check letters (${rawLetterNames.length} + ${checkLetterNames.length})`} />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.28rem', alignItems: 'center', marginBottom: '0.2rem' }}>
         {rawLetterNames.map((name, i) => {
           const val = name.charCodeAt(0) - 0x40;
-          const hl = hasHighlight && highlights.s3.has(i);
+          const hl = hasHighlight && highlights.s2.has(i);
           return (
             <button
               key={i}
-              title={`'${name}' — data letter ${i + 1}/${rawLetterNames.length}, 5-bit value ${val} (${val.toString(2).padStart(5, '0')})`}
-              onClick={() => toggle(3, i)}
+              title={`'${name}' - data letter ${i + 1}/${rawLetterNames.length}, 5-bit value ${val} (${val.toString(2).padStart(5, '0')})`}
+              onClick={() => toggle(2, i)}
               style={{
                 ...chipBase,
                 border: `1px solid ${hl ? colors.pipelineSelBorder : 'var(--border)'}`,
@@ -286,13 +209,13 @@ export function EncodingPipeline({ result, colors, text }: Props) {
             <span style={{
               fontSize: '0.68rem', color: 'var(--text-dim)', margin: '0 0.2rem',
               alignSelf: 'center',
-            }} title="Check letters start here">│</span>
+            }} title="Check letters start here">|</span>
             {checkLetterNames.map((name, i) => {
               const val = name.charCodeAt(0) - 0x40;
               return (
                 <span
                   key={i}
-                  title={`'${name}' — check letter ${i + 1}/${checkLetterNames.length}, error-detection redundancy appended before Hamming ECC`}
+                  title={`'${name}' - check letter ${i + 1}/${checkLetterNames.length}, error-detection redundancy appended before Hamming ECC`}
                   style={{
                     ...chipBase,
                     border: `1px solid ${colors.glyphBtnBorder}`,
@@ -319,13 +242,12 @@ export function EncodingPipeline({ result, colors, text }: Props) {
 
       <Arrow label="Hamming ECC inserts parity bits within each block · criss-cross scrambles bits across blocks · whitening applies position-dependent substitution" />
 
-      {/* ── Step 4: Metadata corners ── */}
-      <SectionHeading n={4} title="6 metadata corners — placed directly, bypass ECC pipeline" />
+      <SectionHeading n={3} title="6 metadata corners - placed directly, bypass ECC pipeline" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '0.2rem' }}>
         {cornerLetters.map((c, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
             <span
-              title={`'${c.name}' — index ${c.index}, 5-bit ${c.index.toString(2).padStart(5, '0')}`}
+              title={`'${c.name}' - index ${c.index}, 5-bit ${c.index.toString(2).padStart(5, '0')}`}
               style={{
                 ...chipBase,
                 border: `1px solid ${colors.glyphBtnBorder}`,
@@ -349,9 +271,8 @@ export function EncodingPipeline({ result, colors, text }: Props) {
 
       <Arrow label="place all letters in the hex grid · add border ring" />
 
-      {/* ── Final ── */}
       <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontStyle: 'italic', paddingLeft: 2 }}>
-        → <strong style={{ fontStyle: 'normal', color: 'var(--text)' }}>{result.letters.length} letters</strong> placed in the symbol above
+        {'->'} <strong style={{ fontStyle: 'normal', color: 'var(--text)' }}>{result.letters.length} letters</strong> placed in the symbol above
         · {result.dataSlots} data/ECC slots · 6 metadata corners · {result.letters.length - result.dataSlots - 6} border letters
         · hover over any cell in the symbol above to see its role
       </div>
