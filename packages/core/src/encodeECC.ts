@@ -9,11 +9,11 @@ import type { EncodeResult, LetterRole, EncodePipeline } from './encode.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const ENCODING_BYTE = 8;
-
 /** bitctrot from arrange.cpp — cyclic rotation table for check-letter computation */
 const BITCTROT = '@BDLHTXYPEIZQKSWAFJ\\RMU[CNV]G^O_'
   .split('').map(c => c.charCodeAt(0));
+const CHR24 = '0123456789 #()*+,-./<=>@';
+const DIGITS = '0123456789';
 
 /** Prime offsets for the 5 criss-cross layers */
 const PRIME = [2, 3, 5, 7, 11] as const;
@@ -30,6 +30,11 @@ const BITPERMTAB0 = [
   0o41032, 0o21430, 0o20413, 0o10243, 0o13042,
   0o40123, 0o12340, 0o34012, 0o01234, 0o23401,
 ];
+
+interface EncodedCandidate {
+  encoding: number;
+  codestring: number[];
+}
 
 // ── Bit permutation table (lazy) ─────────────────────────────────────────────
 
@@ -57,6 +62,97 @@ function getBitPermTab(): number[][] {
 /** Odd-field multiplication — operates on raw char values (0x40–0x5F range) */
 function oddmul(a: number, b: number): number {
   return (((2 * a + 1) * (2 * b + 1)) >> 1) & 31;
+}
+
+function sortCandidate(list: EncodedCandidate[]) {
+  let i = list.length - 2;
+  while (i >= 0 && list[i].codestring.length > list[i + 1].codestring.length) {
+    const tmp = list[i];
+    list[i] = list[i + 1];
+    list[i + 1] = tmp;
+    i--;
+  }
+}
+
+function encode32(text: string): EncodedCandidate | null {
+  const codestring: number[] = [];
+  for (const ch of text) {
+    let code = ch.charCodeAt(0);
+    if (code === 0x20 || code === 0x40) code ^= 0x20 ^ 0x40;
+    if (code < 0x40 || code > 0x5f) return null;
+    codestring.push(code);
+  }
+  return { encoding: 5, codestring };
+}
+
+function encodeAscii(text: string): EncodedCandidate | null {
+  const codestring: number[] = [];
+  let charcode = 0;
+  let nbits = 0;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code & 0xff80) return null;
+    charcode = (charcode << 7) + (code & 0x7f);
+    nbits += 7;
+    while (nbits >= 5) {
+      codestring.push((charcode >> (nbits - 5)) + 0x40);
+      nbits -= 5;
+      charcode &= (1 << nbits) - 1;
+    }
+  }
+  if (nbits) codestring.push((charcode << (5 - nbits)) + 0x40);
+  return { encoding: 7, codestring };
+}
+
+function encodeByte(text: string): EncodedCandidate {
+  const bytes = new TextEncoder().encode(text);
+  const codestring: number[] = [];
+  let charcode = 0;
+  let nbits = 0;
+  for (const byte of bytes) {
+    charcode = (charcode << 8) + byte;
+    nbits += 8;
+    while (nbits >= 5) {
+      codestring.push((charcode >> (nbits - 5)) + 0x40);
+      nbits -= 5;
+      charcode &= (1 << nbits) - 1;
+    }
+  }
+  if (nbits) codestring.push((charcode << (5 - nbits)) + 0x40);
+  return { encoding: 8, codestring };
+}
+
+function encodeDecimal(text: string): EncodedCandidate | null {
+  const codestring: number[] = [];
+  if (text === '') return { encoding: 10, codestring: [0x40] };
+
+  for (let i = 0; i < text.length;) {
+    const dig3 = text.slice(i, i + 3);
+    let charcode = -1;
+    let consumed = 1;
+    if (dig3.length === 3 && [...dig3].every((ch) => DIGITS.includes(ch))) {
+      charcode = Number(dig3);
+      consumed = 3;
+    } else {
+      const found = CHR24.indexOf(text[i]);
+      if (found >= 0) charcode = found + 1000;
+    }
+    if (charcode < 0) return null;
+    codestring.push(Math.floor(charcode / 32) + 0x40, (charcode % 32) + 0x40);
+    i += consumed;
+  }
+  return { encoding: 10, codestring };
+}
+
+function encodedList(text: string): EncodedCandidate[] {
+  const list: EncodedCandidate[] = [];
+  for (const candidate of [encode32(text), encodeAscii(text), encodeByte(text), encodeDecimal(text)]) {
+    if (candidate && (candidate.codestring.length > 0 || text === '')) {
+      list.push(candidate);
+      sortCandidate(list);
+    }
+  }
+  return list;
 }
 
 /**
@@ -331,18 +427,10 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(text);
 
-  // Step 1 — byte-pack input into 5-bit letter chars (0x40–0x5F)
-  const letterChars: number[] = [];
-  let buf = 0, bits = 0;
-  for (const byte of bytes) {
-    buf = (buf << 8) | byte;
-    bits += 8;
-    while (bits >= 5) {
-      bits -= 5;
-      letterChars.push(0x40 | ((buf >> bits) & 0x1f));
-    }
-  }
-  if (bits > 0) letterChars.push(0x40 | ((buf << (5 - bits)) & 0x1f));
+  // Step 1 — choose the shortest compatible C++ encoding candidate.
+  const candidate = encodedList(text)[0];
+  if (!candidate) throw new Error('No compatible propolis encoding found.');
+  const letterChars = candidate.codestring;
 
   // Step 2 — find symbol size and Hamming block layout
   const sr = findSize(letterChars.length, redundancy);
@@ -381,7 +469,7 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
   // Step 7 — metadata (6 corner letters with Lagrange check)
   // lagrange values at x=2,3,4,5: encoding-1, (nBlocks-1)%31, floor((nBlocks-1)%961/31), '@'-'A'=30
   const kb = nBlocks - 1;
-  const v2 = ENCODING_BYTE - 1;      // 7
+  const v2 = candidate.encoding - 1;
   const v3 = kb % 31;
   const v4 = Math.floor((kb % 961) / 31);
   const v5 = 30; // '@' - 'A' = -1 mod 31
@@ -394,7 +482,7 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
     [`${-size},0`,    0x40],                               // '@'  — index marker
     [`0,${size}`,     v4 + 0x41],                          // (kb%961)/31 + 'A'
     [`${size},${size}`, v3 + 0x41],                        // kb%31 + 'A'
-    [`${size},0`,     ENCODING_BYTE + 0x40],               // encoding + '@'
+    [`${size},0`,     candidate.encoding + 0x40],          // encoding + '@'
     [`0,${-size}`,    lc1 + 0x41],                         // Lagrange check 1
     [`${-size},${-size}`, lc0 + 0x41],                    // Lagrange check 0
   ]);
@@ -444,7 +532,7 @@ export function encodeTextECC(text: string, redundancy = 0): EncodeResult {
       { charVal: 0x40,                  role: 'Orientation marker — always @ (blank), decoder finds this corner to orient the code' },
       { charVal: v4 + 0x41,             role: 'Block count — high bits (⌊(nBlocks−1)/31⌋ in GF(31))' },
       { charVal: v3 + 0x41,             role: 'Block count — low bits ((nBlocks−1) mod 31 in GF(31))' },
-      { charVal: ENCODING_BYTE + 0x40,  role: 'Encoding mode (mode 8 = raw bytes — no compression)' },
+      { charVal: candidate.encoding + 0x40, role: `Encoding mode ${candidate.encoding}` },
       { charVal: lc1 + 0x41,            role: 'Lagrange error-check 1 (polynomial at x=1 over GF(31))' },
       { charVal: lc0 + 0x41,            role: 'Lagrange error-check 0 (polynomial at x=0 over GF(31))' },
     ].map(({ charVal, role }) => ({

@@ -1,0 +1,30 @@
+{
+  "name": "@propolis-tools/core",
+  "version": "0.1.0",
+  "description": "Encoding and comparison data utilities for propolis matrix codes",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./internal-test": {
+      "import": "./dist/internal-test.js",
+      "types": "./dist/internal-test.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@propolis-tools/renderer": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

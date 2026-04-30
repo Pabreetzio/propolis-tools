@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "compare:dev": "pnpm --filter @propolis-tools/compare-site dev",
+    "compare:manifest": "pnpm --filter @propolis-tools/compare-site manifest",
+    "compare:generate": "pnpm --filter @propolis-tools/compare-site generate"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

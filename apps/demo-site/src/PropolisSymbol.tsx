@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { renderToSVG, letterCentersInViewBox, type PlacedLetter } from '@propolis-tools/renderer';
 import type { ThemeColors } from './theme.js';
-import type { LetterRole } from './encode.js';
+import type { LetterRole } from '@propolis-tools/core';
 
 interface Props {
   letters: PlacedLetter[];

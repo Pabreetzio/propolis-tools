@@ -179,21 +179,20 @@ describe('encodeTextECC', () => {
     expect(result.bytesEncoded).toBe(11);
   });
 
-  it('produces the correct data letter values (first 20) for "hello world"', () => {
-    // Reference from C++: data letterIndex (first 20):
-    // 23 28 2 5 13 8 24 31 23 15 1 9 26 2 18 22 16 18 0 30
-    const expected = [23, 28, 2, 5, 13, 8, 24, 31, 23, 15, 1, 9, 26, 2, 18, 22, 16, 18, 0, 30];
-    const result = encodeTextECC('hello world');
+  it('matches C++ letter values for "hello" size-2 ASCII encoding', () => {
+    // Reference inferred from C++ --text hello --size 2 --format hmap.
+    const expected = [3, 26, 26, 20, 4, 20, 10, 0, 24, 5, 13, 7, 15, 14, 7, 1, 1, 18, 1];
+    const result = encodeTextECC('hello');
 
     // Find the data letters (non-corner positions) in HVec order
-    // Corners are at norm == size^2 = 9
+    // Corners are at norm == size^2 = 4
     const dataLetters = result.letters.filter(l => {
       const { x, y } = l.center;
       const norm = x * x + y * y - x * y;
-      return norm !== 9; // 9 = size^2 = 3^2
+      return norm <= 4; // exclude the outer border ring
     });
 
-    const actual = dataLetters.slice(0, 20).map(l => l.letterIndex);
+    const actual = dataLetters.map(l => l.letterIndex);
     expect(actual).toEqual(expected);
   });
 

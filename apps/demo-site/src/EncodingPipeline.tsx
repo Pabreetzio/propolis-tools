@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { EncodeResult } from './encode.js';
+import type { EncodeResult } from '@propolis-tools/core';
 import type { ThemeColors } from './theme.js';
 
 interface Props {

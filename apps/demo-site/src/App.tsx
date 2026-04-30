@@ -3,9 +3,8 @@ import { LetterGlyph } from './LetterGlyph.js';
 import { EncoderPanel } from './EncoderPanel.js';
 import { QRComparison } from './QRComparison.js';
 import { LETTER_PATTERNS } from '@propolis-tools/renderer';
+import { encodeText, encodeTextECC } from '@propolis-tools/core';
 import { themeColors, resolveTheme, type Theme } from './theme.js';
-import { encodeText } from './encode.js';
-import { encodeTextECC } from './encodeECC.js';
 import { EncodingPipeline } from './EncodingPipeline.js';
 
 function getInitialTheme(): Theme {
